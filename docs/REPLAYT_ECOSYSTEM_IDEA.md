@@ -44,3 +44,8 @@ _Novel composition of replayt + other tools._
 - **One-paragraph pitch:** Integrators plug this package into replayt-powered apps to export **workflow run traces** to
   standard OpenTelemetry pipelines (metrics can follow as public lifecycle APIs stabilize), while keeping compatibility
   pins, tests, and release notes in this repo—not in replayt core.
+- **Test coverage expectation:** Automated tests must cover unit logic and integration boundaries (e.g., using in-memory
+  exporters to verify span attributes). CI runs Ruff (lint/format) and pytest on every pull request, as configured in
+  `.github/workflows/ci.yml`.
+- **Tracking replayt releases:** This repo tracks replayt versions via dependency pins in `pyproject.toml`, CI matrix
+  testing, and changelog notes. Breakages are fixed by updating this package, not by steering replayt core.
