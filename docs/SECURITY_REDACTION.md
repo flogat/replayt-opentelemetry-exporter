@@ -2,6 +2,8 @@
 
 This document defines the redaction and safe defaults for attributes in OpenTelemetry traces (spans) and metrics emitted by the replayt OpenTelemetry exporter.
 
+**See also:** [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) for LLM/demos section on telemetry redaction and overall design principles.
+
 ## Categories
 
 ### Never Emit
