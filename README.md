@@ -6,6 +6,8 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 **[docs/REPLAYT_ECOSYSTEM_IDEA.md](docs/REPLAYT_ECOSYSTEM_IDEA.md)** for ecosystem positioning, then
 **[docs/MISSION.md](docs/MISSION.md)** for scope, audiences, and success criteria.
 
+**Implementation status:** The package currently ships **workflow run tracing** only. OpenTelemetry **metrics** stay on the roadmap and match the mission’s “traces and/or metrics” scope once replayt lifecycle APIs are pinned and declared in the README.
+
 ## Design principles
 
 **[docs/DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md)** covers **replayt** compatibility, versioning, and (for showcases)

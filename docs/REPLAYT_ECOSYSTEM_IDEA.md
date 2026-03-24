@@ -41,5 +41,6 @@ _Novel composition of replayt + other tools._
 
 - **Primary pattern:** **1) Core-gap** — replayt does not ship first-party OpenTelemetry instrumentation; this repository
   provides traces and metrics for workflow runs as an optional consumer-side adapter.
-- **One-paragraph pitch:** Integrators plug this package into replayt-powered apps to export run telemetry to standard
-  OpenTelemetry pipelines while keeping compatibility pins, tests, and release notes in this repo—not in replayt core.
+- **One-paragraph pitch:** Integrators plug this package into replayt-powered apps to export **workflow run traces** to
+  standard OpenTelemetry pipelines (metrics can follow as public lifecycle APIs stabilize), while keeping compatibility
+  pins, tests, and release notes in this repo—not in replayt core.
