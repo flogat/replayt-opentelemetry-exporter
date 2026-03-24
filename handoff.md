@@ -1,7 +1,7 @@
 # Handoff für nächste Phase
 
 ## Entscheidungen
-- MISSION.md ist bereits vollständig und erfüllt alle Akzeptanzkriterien der Backlog-Phase 2
+- MISSION.md ist bereits vollständig und erfüllt alle Akzeptanzkriterien der Backlog-Phase 5
 - Keine Änderungen an MISSION.md erforderlich
 - Alle relevanten Dokumentationsdateien sind vorhanden: MISSION.md, DESIGN_PRINCIPLES.md, REPLAYT_ECOSYSTEM_IDEA.md
 
@@ -15,5 +15,5 @@
 - Keine
 
 ## Nächste Aktionen
-- Phase 3 kann fortgesetzt werden, da MISSION.md bereits finalisiert ist
+- Phase 6 kann fortgesetzt werden, da MISSION.md bereits finalisiert ist
 - Keine weiteren Dateien müssen hinzugefügt werden
