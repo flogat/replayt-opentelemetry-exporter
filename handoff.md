@@ -1,14 +1,14 @@
-# Handoff for Phase 6
+# Handoff for Phase 3
 
 ## Entscheidungen
-- Primary ecosystem pattern (core-gap) and one-paragraph pitch are confirmed locked in `docs/REPLAYT_ECOSYSTEM_IDEA.md`.
-- Test coverage expectations and replayt release tracking strategy are documented in the same file.
-- Security review of ecosystem pattern documentation completed - no issues found.
-- `pyproject.toml` reviewed - contains appropriate dependency pins and CI configuration aligned with test coverage requirements.
+- Updated `docs/SECURITY_REDACTION.md` to include LLM-specific fields section as required by the backlog.
+- The redaction policy now covers: never emit, hash/truncate, safe to emit categories, plus LLM-specific fields.
+- References OpenTelemetry semantic conventions as required.
+- `docs/DESIGN_PRINCIPLES.md` already references the redaction policy appropriately.
+- No code changes needed at this phase (documentation focus).
 
 ## Dateien berührt
-- `docs/REPLAYT_ECOSYSTEM_IDEA.md`: Verified content is complete and properly structured.
-- `pyproject.toml`: Reviewed for alignment with test coverage and replayt release tracking.
+- `docs/SECURITY_REDACTION.md`: Updated with LLM-specific fields section.
 
 ## Risiken
 - None identified.
@@ -17,5 +17,6 @@
 - None.
 
 ## Nächste Aktionen
-- Phase 6 (Security review pass) completed.
+- Phase 3 (Document attribute redaction and safe defaults) completed.
 - No changelog update required (no CHANGELOG.md present).
+- Next phase can proceed.
