@@ -1,6 +1,6 @@
-# Security Redaction Policy
+# Security Redaction Policy for Spans and Metrics
 
-This document defines the redaction and safe defaults for attributes in OpenTelemetry traces and metrics emitted by the replayt OpenTelemetry exporter.
+This document defines the redaction and safe defaults for attributes in OpenTelemetry traces (spans) and metrics emitted by the replayt OpenTelemetry exporter.
 
 ## Categories
 
