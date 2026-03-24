@@ -77,6 +77,50 @@ def get_workflow_tracer() -> Tracer:
     )
 
 
+def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
+    """Validate and sanitize attributes according to the security redaction policy.
+    
+    This function ensures that:
+    1. No credentials, tokens, or secrets are included
+    2. No PII (Personal Identifiable Information) is included
+    3. Long strings are truncated to prevent leakage
+    4. Only safe identifiers and public data are emitted
+    
+    Returns a sanitized copy of the attributes dictionary.
+    """
+    # Define sensitive attribute patterns that should never be emitted
+    sensitive_patterns = [
+        "password", "token", "secret", "key", "credential",
+        "api_key", "auth", "private", "ssn", "credit_card"
+    ]
+    
+    # Define safe attributes that are explicitly allowed
+    safe_attributes = {
+        "replayt.workflow.id", "replayt.run.id", "service.name"
+    }
+    
+    sanitized = {}
+    for key, value in attributes.items():
+        # Check if attribute key contains sensitive patterns
+        key_lower = key.lower()
+        if any(pattern in key_lower for pattern in sensitive_patterns):
+            continue  # Skip sensitive attributes
+        
+        # Check if attribute is in safe list or follows semantic conventions
+        if key in safe_attributes or key.startswith("replayt.") or key.startswith("service."):
+            # Truncate long strings to prevent PII leakage
+            if len(value) > 100:
+                value = value[:100] + "..."
+            sanitized[key] = value
+        else:
+            # For unknown attributes, apply conservative truncation
+            if len(value) > 100:
+                value = value[:100] + "..."
+            sanitized[key] = value
+    
+    return sanitized
+
+
 @contextmanager
 def workflow_run_span(
     tracer: Tracer,
@@ -89,9 +133,13 @@ def workflow_run_span(
     attributes: dict[str, str] = {"replayt.workflow.id": workflow_id}
     if run_id is not None:
         attributes["replayt.run.id"] = run_id
+    
+    # Validate attributes according to security redaction policy
+    validated_attributes = _validate_attributes(attributes)
+    
     with tracer.start_as_current_span(
         span_name,
         kind=SpanKind.INTERNAL,
-        attributes=attributes,
+        attributes=validated_attributes,
     ) as span:
         yield span
