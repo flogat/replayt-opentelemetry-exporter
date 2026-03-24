@@ -68,6 +68,13 @@ CI runs the same checks on Python 3.11 and 3.12 (see `.github/workflows/ci.yml`)
 
 For tests or custom wiring without touching the global provider, use `build_tracer_provider` and obtain a tracer via `provider.get_tracer(...)`.
 
+## Security considerations
+
+- **Transport and endpoints** — In production, point OTLP at an **HTTPS** collector URL (for example via `OTEL_EXPORTER_OTLP_ENDPOINT`). Plain HTTP is only appropriate on trusted local networks. Follow your OpenTelemetry distro’s docs for TLS, mTLS, and proxies.
+- **Credentials** — Prefer **environment variables** (for example `OTEL_EXPORTER_OTLP_HEADERS`) or your platform’s secret injection for exporter auth. Do not embed API keys or tokens in source code or commit them to the repository.
+- **Data in spans** — Values passed to `workflow_run_span` (`workflow_id`, `run_id`) and to `build_resource` (`extra_attributes`) are **exported to your observability backend** and may appear in vendor UIs, support tickets, and long-term retention stores. Do not put secrets, raw credentials, or unnecessary personally identifiable information (PII) in span or resource attributes. Treat them like structured logs from a confidentiality perspective.
+- **Supply chain** — Keep OpenTelemetry and this package **updated** in line with your organization’s patch policy; pinned ranges in `pyproject.toml` should be reviewed when cutting releases.
+
 ## Optional agent workflows
 
 This repo may include a [`.cursor/skills/`](.cursor/skills/) directory for Cursor-style agent skills. **`.gitignore`**

@@ -14,6 +14,9 @@ Revise as the project matures. Defaults below are minimal—expand with rules fo
 
 Document models, secrets handling, cost and redaction expectations here or in MISSION.
 
+**Telemetry:** Span and resource attributes are shipped to third-party observability systems. Apply the same redaction and
+secret-handling rules you use for logs and traces elsewhere (no credentials in attributes; minimize PII).
+
 ## Audience (extend)
 
 | Audience | Needs |
