@@ -6,7 +6,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 **[docs/REPLAYT_ECOSYSTEM_IDEA.md](docs/REPLAYT_ECOSYSTEM_IDEA.md)** for ecosystem positioning, then
 **[docs/MISSION.md](docs/MISSION.md)** for scope, audiences, and success criteria.
 
-**Implementation status:** The package currently ships **workflow run tracing** only. OpenTelemetry **metrics** stay on the roadmap and match the mission’s “traces and/or metrics” scope once replayt lifecycle APIs are pinned and declared in the README.
+**Implementation status:** The package now ships **workflow run tracing** and **metrics** for run outcomes and exporter health.
 
 ## Design principles
 
@@ -39,7 +39,7 @@ python -m ruff format --check .
 
 CI runs the same checks on Python 3.11 and 3.12 (see `.github/workflows/ci.yml`).
 
-## Enable tracing in development
+## Enable tracing and metrics in development
 
 1. Install runtime dependencies (included in the default package) and, for OTLP HTTP export, the optional extra:
 
@@ -51,35 +51,62 @@ CI runs the same checks on Python 3.11 and 3.12 (see `.github/workflows/ci.yml`)
 
    ```python
    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+   from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 
    from replayt_opentelemetry_exporter import (
        install_tracer_provider,
+       install_meter_provider,
        get_workflow_tracer,
        workflow_run_span,
    )
 
+   # Install both tracer and meter providers
    install_tracer_provider(span_exporters=[OTLPSpanExporter()])
+   install_meter_provider(metric_exporters=[OTLPMetricExporter()])
+   
    tracer = get_workflow_tracer()
    with workflow_run_span(tracer, "my-workflow-id", run_id="optional-run-id"):
        ...  # replayt run body
    ```
 
-3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger’s OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend.
+3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend.
 
-For tests or custom wiring without touching the global provider, use `build_tracer_provider` and obtain a tracer via `provider.get_tracer(...)`.
+For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`.
+
+## Metrics
+
+The package exports the following metrics:
+
+### Counters
+- `replayt.workflow.runs.completed`: Number of workflow runs completed successfully
+- `replayt.workflow.runs.failed`: Number of workflow runs that failed
+- `replayt.exporter.errors`: Number of exporter errors (e.g., dropped spans)
+
+### Histograms
+- `replayt.workflow.run.duration`: Duration of workflow runs (in milliseconds)
+
+### Metric Attributes
+All metrics include the following attributes where applicable:
+- `replayt.workflow.id`: The workflow identifier (public, safe to emit)
+- `replayt.run.id`: The run identifier (public, safe to emit)
+
+### Cardinality Justification
+- **Low cardinality**: Workflow IDs and run IDs are unique identifiers but are necessary for correlating metrics with traces
+- **No PII**: These identifiers do not contain personal information
+- **Public identifiers**: These are designed to be public within the observability system
 
 ## Security considerations
 
-- **Transport and endpoints** — In production, point OTLP at an **HTTPS** collector URL (for example via `OTEL_EXPORTER_OTLP_ENDPOINT`). Plain HTTP is only appropriate on trusted local networks. Follow your OpenTelemetry distro’s docs for TLS, mTLS, and proxies.
-- **Credentials** — Prefer **environment variables** (for example `OTEL_EXPORTER_OTLP_HEADERS`) or your platform’s secret injection for exporter auth. Do not embed API keys or tokens in source code or commit them to the repository.
-- **Data in spans** — Values passed to `workflow_run_span` (`workflow_id`, `run_id`) and to `build_resource` (`extra_attributes`) are **exported to your observability backend** and may appear in vendor UIs, support tickets, and long-term retention stores. Do not put secrets, raw credentials, or unnecessary personally identifiable information (PII) in span or resource attributes. Treat them like structured logs from a confidentiality perspective.
-- **Supply chain** — Keep OpenTelemetry and this package **updated** in line with your organization’s patch policy; pinned ranges in `pyproject.toml` should be reviewed when cutting releases.
+- **Transport and endpoints** — In production, point OTLP at an **HTTPS** collector URL (for example via `OTEL_EXPORTER_OTLP_ENDPOINT`). Plain HTTP is only appropriate on trusted local networks. Follow your OpenTelemetry distro's docs for TLS, mTLS, and proxies.
+- **Credentials** — Prefer **environment variables** (for example `OTEL_EXPORTER_OTLP_HEADERS`) or your platform's secret injection for exporter auth. Do not embed API keys or tokens in source code or commit them to the repository.
+- **Data in spans and metrics** — Values passed to `workflow_run_span` (`workflow_id`, `run_id`) and to `build_resource` (`extra_attributes`) are **exported to your observability backend** and may appear in vendor UIs, support tickets, and long-term retention stores. Do not put secrets, raw credentials, or unnecessary personally identifiable information (PII) in span or resource attributes. Treat them like structured logs from a confidentiality perspective.
+- **Supply chain** — Keep OpenTelemetry and this package **updated** in line with your organization's patch policy; pinned ranges in `pyproject.toml` should be reviewed when cutting releases.
 
 ## Optional agent workflows
 
 This repo may include a [`.cursor/skills/`](.cursor/skills/) directory for Cursor-style agent skills. **`.gitignore`**
 lists **`.cursor/skills/`** so those files stay local and are not pushed. Adapt or remove the directory to match your
-team’s tooling.
+team's tooling.
 
 ## Project layout
 

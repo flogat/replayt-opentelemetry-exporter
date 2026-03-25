@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -9,9 +11,12 @@ from opentelemetry.trace import Tracer
 from replayt_opentelemetry_exporter import (
     build_resource,
     build_tracer_provider,
+    build_meter_provider,
     get_workflow_tracer,
     install_tracer_provider,
+    install_meter_provider,
     workflow_run_span,
+    record_exporter_error,
 )
 
 
@@ -37,6 +42,17 @@ def test_build_tracer_provider_records_spans() -> None:
     assert spans[0].name == "s"
 
 
+def test_build_meter_provider_records_metrics() -> None:
+    resource = Resource.create({"service.name": "test"})
+    reader = InMemoryMetricReader()
+    provider = build_meter_provider(resource=resource, metric_exporters=[reader])
+    meter = provider.get_meter("t")
+    counter = meter.create_counter("test_counter")
+    counter.add(1)
+    metrics_data = reader.get_metrics_data()
+    assert len(metrics_data.resource_metrics) > 0
+
+
 def test_install_tracer_provider_calls_set_tracer_provider() -> None:
     exporter = InMemorySpanExporter()
     captured: list[trace.TracerProvider] = []
@@ -52,6 +68,19 @@ def test_install_tracer_provider_calls_set_tracer_provider() -> None:
     with tracer.start_as_current_span("s"):
         pass
     assert len(exporter.get_finished_spans()) == 1
+
+
+def test_install_meter_provider_calls_set_meter_provider() -> None:
+    reader = InMemoryMetricReader()
+    captured: list[MeterProvider] = []
+
+    def capture_set(provider: MeterProvider) -> None:
+        captured.append(provider)
+
+    with patch.object(metrics, "set_meter_provider", side_effect=capture_set):
+        out = install_meter_provider(metric_exporters=[reader])
+    assert len(captured) == 1
+    assert captured[0] is out
 
 
 def _workflow_tracer_from_memory_exporter() -> tuple[Tracer, InMemorySpanExporter]:
@@ -96,3 +125,156 @@ def test_get_workflow_tracer_uses_global_provider() -> None:
         pass
     names = [s.name for s in exporter.get_finished_spans()]
     assert "replayt.workflow.run" in names
+
+
+def test_workflow_run_span_records_success_metrics() -> None:
+    """Test that successful workflow runs record metrics."""
+    # Setup metrics with in-memory reader
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics.set_meter_provider(provider)
+    
+    # Reset tracing module metrics to ensure fresh initialization
+    import replayt_opentelemetry_exporter.tracing as tracing_module
+    tracing_module._meter = None
+    tracing_module._workflow_runs_completed = None
+    tracing_module._workflow_runs_failed = None
+    tracing_module._exporter_errors = None
+    tracing_module._workflow_run_duration = None
+    
+    tracer, _ = _workflow_tracer_from_memory_exporter()
+    
+    with workflow_run_span(tracer, "workflow-123", run_id="run-456"):
+        pass
+    
+    # Check metrics
+    metrics_data = reader.get_metrics_data()
+    resource_metrics = metrics_data.resource_metrics
+    
+    # Find the completed runs counter
+    completed_metric = None
+    for rm in resource_metrics:
+        for sm in rm.scope_metrics:
+            for metric in sm.metrics:
+                if metric.name == "replayt.workflow.runs.completed":
+                    completed_metric = metric
+                    break
+    
+    assert completed_metric is not None
+    # Verify the metric has data points
+    assert len(completed_metric.data) > 0
+
+
+def test_workflow_run_span_records_failure_metrics() -> None:
+    """Test that failed workflow runs record metrics."""
+    # Setup metrics with in-memory reader
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics.set_meter_provider(provider)
+    
+    # Reset tracing module metrics to ensure fresh initialization
+    import replayt_opentelemetry_exporter.tracing as tracing_module
+    tracing_module._meter = None
+    tracing_module._workflow_runs_completed = None
+    tracing_module._workflow_runs_failed = None
+    tracing_module._exporter_errors = None
+    tracing_module._workflow_run_duration = None
+    
+    tracer, _ = _workflow_tracer_from_memory_exporter()
+    
+    try:
+        with workflow_run_span(tracer, "workflow-123", run_id="run-456"):
+            raise ValueError("Test error")
+    except ValueError:
+        pass
+    
+    # Check metrics
+    metrics_data = reader.get_metrics_data()
+    resource_metrics = metrics_data.resource_metrics
+    
+    # Find the failed runs counter
+    failed_metric = None
+    for rm in resource_metrics:
+        for sm in rm.scope_metrics:
+            for metric in sm.metrics:
+                if metric.name == "replayt.workflow.runs.failed":
+                    failed_metric = metric
+                    break
+    
+    assert failed_metric is not None
+    # Verify the metric has data points
+    assert len(failed_metric.data) > 0
+
+
+def test_record_exporter_error() -> None:
+    """Test that exporter errors are recorded."""
+    # Setup metrics with in-memory reader
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics.set_meter_provider(provider)
+    
+    # Reset tracing module metrics to ensure fresh initialization
+    import replayt_opentelemetry_exporter.tracing as tracing_module
+    tracing_module._meter = None
+    tracing_module._workflow_runs_completed = None
+    tracing_module._workflow_runs_failed = None
+    tracing_module._exporter_errors = None
+    tracing_module._workflow_run_duration = None
+    
+    # Record an exporter error
+    record_exporter_error()
+    
+    # Check metrics
+    metrics_data = reader.get_metrics_data()
+    resource_metrics = metrics_data.resource_metrics
+    
+    # Find the exporter errors counter
+    errors_metric = None
+    for rm in resource_metrics:
+        for sm in rm.scope_metrics:
+            for metric in sm.metrics:
+                if metric.name == "replayt.exporter.errors":
+                    errors_metric = metric
+                    break
+    
+    assert errors_metric is not None
+    # Verify the metric has data points
+    assert len(errors_metric.data) > 0
+
+
+def test_duration_histogram_records_values() -> None:
+    """Test that duration histogram records values."""
+    # Setup metrics with in-memory reader
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics.set_meter_provider(provider)
+    
+    # Reset tracing module metrics to ensure fresh initialization
+    import replayt_opentelemetry_exporter.tracing as tracing_module
+    tracing_module._meter = None
+    tracing_module._workflow_runs_completed = None
+    tracing_module._workflow_runs_failed = None
+    tracing_module._exporter_errors = None
+    tracing_module._workflow_run_duration = None
+    
+    tracer, _ = _workflow_tracer_from_memory_exporter()
+    
+    with workflow_run_span(tracer, "workflow-123", run_id="run-456"):
+        pass
+    
+    # Check metrics
+    metrics_data = reader.get_metrics_data()
+    resource_metrics = metrics_data.resource_metrics
+    
+    # Find the duration histogram
+    duration_metric = None
+    for rm in resource_metrics:
+        for sm in rm.scope_metrics:
+            for metric in sm.metrics:
+                if metric.name == "replayt.workflow.run.duration":
+                    duration_metric = metric
+                    break
+    
+    assert duration_metric is not None
+    # Verify the metric has data points
+    assert len(duration_metric.data) > 0
