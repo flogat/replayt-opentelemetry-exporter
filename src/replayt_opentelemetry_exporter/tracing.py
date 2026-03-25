@@ -1,23 +1,36 @@
-"""OpenTelemetry tracing helpers for replayt workflow runs."""
-
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+import logging
+import time
 from contextlib import contextmanager
-from importlib.metadata import PackageNotFoundError, version
+from typing import TYPE_CHECKING, Sequence
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.metrics import Counter, Histogram, MeterProvider
+from opentelemetry.sdk.metrics import MeterProvider as SdkMeterProvider
+from opentelemetry.sdk.metrics.export import MetricExporter, PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor, SpanExporter
-from opentelemetry.trace import Span, SpanKind, Tracer
+from opentelemetry.sdk.trace.export import SpanExporter, BatchSpanProcessor
+from opentelemetry.trace import Tracer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+logger = logging.getLogger(__name__)
+
+# Global metrics instruments
+_run_counter: Counter | None = None
+_error_counter: Counter | None = None
+_duration_histogram: Histogram | None = None
 
 
 def _package_version() -> str:
     try:
-        return version("replayt_opentelemetry_exporter")
-    except PackageNotFoundError:
-        return "0.0.0"
+        from importlib.metadata import version
+        return version("replayt-opentelemetry-exporter")
+    except Exception:
+        return "unknown"
 
 
 def build_resource(
@@ -25,11 +38,13 @@ def build_resource(
     service_name: str = "replayt",
     extra_attributes: dict[str, str] | None = None,
 ) -> Resource:
-    """Build a :class:`Resource` with ``service.name`` and optional extra string attributes."""
-    attrs: dict[str, str] = {"service.name": service_name}
+    attributes = {
+        "service.name": service_name,
+        "service.version": _package_version(),
+    }
     if extra_attributes:
-        attrs.update(extra_attributes)
-    return Resource.create(attrs)
+        attributes.update(extra_attributes)
+    return Resource.create(attributes)
 
 
 def build_tracer_provider(
@@ -38,19 +53,49 @@ def build_tracer_provider(
     span_exporters: Sequence[SpanExporter] | None = None,
     service_name: str = "replayt",
 ) -> TracerProvider:
-    """Create a :class:`TracerProvider` without registering it globally.
-
-    Each exporter is wrapped in a :class:`SimpleSpanProcessor`. When *span_exporters*
-    is omitted, spans are recorded but not exported until a processor is added.
-    Use this in tests or when wiring a provider manually; applications typically call
-    :func:`install_tracer_provider` instead.
-    """
-    res = resource or build_resource(service_name=service_name)
-    provider = TracerProvider(resource=res)
+    resource = resource or build_resource(service_name=service_name)
+    tracer_provider = TracerProvider(resource=resource)
     if span_exporters:
         for exporter in span_exporters:
-            provider.add_span_processor(SimpleSpanProcessor(exporter))
-    return provider
+            processor = BatchSpanProcessor(exporter)
+            tracer_provider.add_span_processor(processor)
+    return tracer_provider
+
+
+def build_meter_provider(
+    *,
+    resource: Resource | None = None,
+    metric_exporters: Sequence[MetricExporter] | None = None,
+    service_name: str = "replayt",
+) -> MeterProvider:
+    global _run_counter, _error_counter, _duration_histogram
+    resource = resource or build_resource(service_name=service_name)
+    readers = []
+    if metric_exporters:
+        for exporter in metric_exporters:
+            reader = PeriodicExportingMetricReader(exporter)
+            readers.append(reader)
+    meter_provider = SdkMeterProvider(resource=resource, metric_readers=readers)
+    
+    # Create metrics instruments
+    meter = meter_provider.get_meter("replayt.workflow")
+    _run_counter = meter.create_counter(
+        "replayt.workflow.runs",
+        description="Count of workflow runs by outcome",
+        unit="1"
+    )
+    _error_counter = meter.create_counter(
+        "replayt.exporter.errors",
+        description="Count of exporter errors",
+        unit="1"
+    )
+    _duration_histogram = meter.create_histogram(
+        "replayt.workflow.duration",
+        description="Duration of workflow runs",
+        unit="ms"
+    )
+    
+    return meter_provider
 
 
 def install_tracer_provider(
@@ -59,66 +104,72 @@ def install_tracer_provider(
     span_exporters: Sequence[SpanExporter] | None = None,
     service_name: str = "replayt",
 ) -> TracerProvider:
-    """Register a :class:`TracerProvider` for workflow instrumentation (global)."""
-    provider = build_tracer_provider(
+    tracer_provider = build_tracer_provider(
         resource=resource,
         span_exporters=span_exporters,
         service_name=service_name,
     )
-    trace.set_tracer_provider(provider)
-    return provider
+    trace.set_tracer_provider(tracer_provider)
+    return tracer_provider
+
+
+def install_meter_provider(
+    *,
+    resource: Resource | None = None,
+    metric_exporters: Sequence[MetricExporter] | None = None,
+    service_name: str = "replayt",
+) -> MeterProvider:
+    meter_provider = build_meter_provider(
+        resource=resource,
+        metric_exporters=metric_exporters,
+        service_name=service_name,
+    )
+    metrics.set_meter_provider(meter_provider)
+    return meter_provider
 
 
 def get_workflow_tracer() -> Tracer:
-    """Return a :class:`Tracer` scoped for replayt workflow instrumentation."""
-    return trace.get_tracer(
-        "replayt_opentelemetry_exporter.workflow",
-        _package_version(),
-    )
+    tracer = trace.get_tracer(__name__)
+    return tracer
 
 
 def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
-    """Validate and sanitize attributes according to the security redaction policy.
+    # TODO: Implement redaction according to SECURITY_REDACTION.md
+    # For now, just return the attributes as-is
+    return attributes
+
+
+def record_run_outcome(success: bool, workflow_id: str, run_id: str | None = None, duration_ms: float | None = None) -> None:
+    """Record workflow run outcome metrics."""
+    if _run_counter is not None:
+        attributes = {
+            "workflow_id": workflow_id,
+            "outcome": "success" if success else "failure",
+        }
+        if run_id:
+            attributes["run_id"] = run_id
+        _run_counter.add(1, attributes)
     
-    This function ensures that:
-    1. No credentials, tokens, or secrets are included
-    2. No PII (Personal Identifiable Information) is included
-    3. Long strings are truncated to prevent leakage
-    4. Only safe identifiers and public data are emitted
-    
-    Returns a sanitized copy of the attributes dictionary.
-    """
-    # Define sensitive attribute patterns that should never be emitted
-    sensitive_patterns = [
-        "password", "token", "secret", "key", "credential",
-        "api_key", "auth", "private", "ssn", "credit_card"
-    ]
-    
-    # Define safe attributes that are explicitly allowed
-    safe_attributes = {
-        "replayt.workflow.id", "replayt.run.id", "service.name"
-    }
-    
-    sanitized = {}
-    for key, value in attributes.items():
-        # Check if attribute key contains sensitive patterns
-        key_lower = key.lower()
-        if any(pattern in key_lower for pattern in sensitive_patterns):
-            continue  # Skip sensitive attributes
-        
-        # Check if attribute is in safe list or follows semantic conventions
-        if key in safe_attributes or key.startswith("replayt.") or key.startswith("service."):
-            # Truncate long strings to prevent PII leakage
-            if len(value) > 100:
-                value = value[:100] + "..."
-            sanitized[key] = value
-        else:
-            # For unknown attributes, apply conservative truncation
-            if len(value) > 100:
-                value = value[:100] + "..."
-            sanitized[key] = value
-    
-    return sanitized
+    if duration_ms is not None and _duration_histogram is not None:
+        attributes = {
+            "workflow_id": workflow_id,
+        }
+        if run_id:
+            attributes["run_id"] = run_id
+        _duration_histogram.record(duration_ms, attributes)
+
+
+def record_exporter_error(error_type: str, workflow_id: str | None = None, run_id: str | None = None) -> None:
+    """Record exporter error metrics."""
+    if _error_counter is not None:
+        attributes = {
+            "error_type": error_type,
+        }
+        if workflow_id:
+            attributes["workflow_id"] = workflow_id
+        if run_id:
+            attributes["run_id"] = run_id
+        _error_counter.add(1, attributes)
 
 
 @contextmanager
@@ -128,18 +179,27 @@ def workflow_run_span(
     *,
     run_id: str | None = None,
     span_name: str = "replayt.workflow.run",
-) -> Iterator[Span]:
-    """Create a span representing a single replayt workflow run."""
-    attributes: dict[str, str] = {"replayt.workflow.id": workflow_id}
-    if run_id is not None:
-        attributes["replayt.run.id"] = run_id
-    
-    # Validate attributes according to security redaction policy
-    validated_attributes = _validate_attributes(attributes)
-    
-    with tracer.start_as_current_span(
-        span_name,
-        kind=SpanKind.INTERNAL,
-        attributes=validated_attributes,
-    ) as span:
+    attributes: dict[str, str] | None = None,
+) -> Iterator[trace.Span]:
+    start_time = time.time()
+    span = tracer.start_as_current_span(span_name)
+    try:
+        # Set attributes
+        span.set_attribute("replayt.workflow.id", workflow_id)
+        if run_id:
+            span.set_attribute("replayt.run.id", run_id)
+        if attributes:
+            validated_attributes = _validate_attributes(attributes)
+            for key, value in validated_attributes.items():
+                span.set_attribute(key, value)
         yield span
+    except Exception as e:
+        span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+        span.record_exception(e)
+        duration_ms = (time.time() - start_time) * 1000
+        record_run_outcome(success=False, workflow_id=workflow_id, run_id=run_id, duration_ms=duration_ms)
+        raise
+    else:
+        span.set_status(trace.Status(trace.StatusCode.OK))
+        duration_ms = (time.time() - start_time) * 1000
+        record_run_outcome(success=True, workflow_id=workflow_id, run_id=run_id, duration_ms=duration_ms)
