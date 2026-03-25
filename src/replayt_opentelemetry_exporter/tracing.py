@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass, asdict
 from importlib.metadata import PackageNotFoundError, version
+from datetime import datetime
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -119,6 +121,71 @@ def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
             sanitized[key] = value
     
     return sanitized
+
+
+@dataclass
+class RunSummary:
+    """Summary of a replayt workflow run for PM and support-facing artifacts.
+    
+    This dataclass defines the safe fields that can be included in a run summary.
+    All fields are non-secret and follow the security redaction policy.
+    """
+    workflow_id: str
+    run_id: str
+    start_time: str  # ISO 8601 timestamp
+    end_time: str    # ISO 8601 timestamp
+    outcome: str     # e.g., "success", "failure", "cancelled"
+    high_level_steps: list[str]  # High-level steps (e.g., ["init", "process", "finalize"])
+    duration_ms: int  # Total duration in milliseconds
+    error_message: str | None = None  # Safe error message (no sensitive details)
+
+
+def generate_run_summary(
+    span: Span,
+    workflow_id: str,
+    run_id: str,
+    outcome: str,
+    high_level_steps: list[str],
+    error_message: str | None = None,
+) -> RunSummary:
+    """Generate a run summary from span data and workflow context.
+    
+    This function creates a RunSummary object with safe fields only,
+    following the security redaction policy (see SECURITY_REDACTION.md).
+    
+    Args:
+        span: The OpenTelemetry span for the workflow run.
+        workflow_id: The workflow identifier.
+        run_id: The run identifier.
+        outcome: The outcome of the run (e.g., "success", "failure").
+        high_level_steps: List of high-level step names.
+        error_message: Optional safe error message (no sensitive details).
+    
+    Returns:
+        RunSummary: A summary object with non-secret fields.
+    """
+    # Get timestamps from span
+    start_time = datetime.fromtimestamp(span.start_time / 1e9).isoformat()
+    end_time = datetime.fromtimestamp(span.end_time / 1e9).isoformat() if span.end_time else start_time
+    
+    # Calculate duration
+    duration_ms = int((span.end_time - span.start_time) / 1e6) if span.end_time else 0
+    
+    # Ensure error message is safe (truncate if too long)
+    safe_error = None
+    if error_message:
+        safe_error = error_message[:100] + "..." if len(error_message) > 100 else error_message
+    
+    return RunSummary(
+        workflow_id=workflow_id,
+        run_id=run_id,
+        start_time=start_time,
+        end_time=end_time,
+        outcome=outcome,
+        high_level_steps=high_level_steps,
+        duration_ms=duration_ms,
+        error_message=safe_error,
+    )
 
 
 @contextmanager
