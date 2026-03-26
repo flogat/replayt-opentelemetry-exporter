@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 from __future__ import annotations
+=======
+from unittest.mock import patch
+from datetime import datetime
+>>>>>>> main
 
 import pytest
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -16,9 +21,14 @@ from replayt_opentelemetry_exporter.tracing import (
     install_meter_provider,
     get_workflow_tracer,
     workflow_run_span,
+<<<<<<< HEAD
     _validate_attributes,
     record_run_outcome,
     record_exporter_error,
+=======
+    generate_run_summary,
+    RunSummary,
+>>>>>>> main
 )
 
 
@@ -129,6 +139,7 @@ def test_workflow_run_span_records_success_metrics() -> None:
     tracer, _ = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(tracer, "wf-123", run_id="run-456"):
         pass
+<<<<<<< HEAD
     
     # Force collection
     reader.collect()
@@ -231,3 +242,68 @@ def test_duration_histogram_records_values() -> None:
                         assert data_point.attributes.get("workflow_id") == "wf-123"
                         assert data_point.count > 0
     assert found_duration_histogram, "replayt.workflow.duration metric not found"
+=======
+    names = [s.name for s in exporter.get_finished_spans()]
+    assert "replayt.workflow.run" in names
+
+
+def test_generate_run_summary_basic() -> None:
+    """Test that generate_run_summary creates a RunSummary with safe fields."""
+    tracer, exporter = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(tracer, "wf-summary", run_id="run-summary") as span:
+        summary = generate_run_summary(
+            span=span,
+            workflow_id="wf-summary",
+            run_id="run-summary",
+            outcome="success",
+            high_level_steps=["init", "process", "finalize"],
+        )
+    
+    # Verify summary fields
+    assert summary.workflow_id == "wf-summary"
+    assert summary.run_id == "run-summary"
+    assert summary.outcome == "success"
+    assert summary.high_level_steps == ["init", "process", "finalize"]
+    assert summary.duration_ms >= 0
+    assert summary.error_message is None
+    # Verify timestamps are ISO format
+    datetime.fromisoformat(summary.start_time)
+    datetime.fromisoformat(summary.end_time)
+
+
+def test_generate_run_summary_with_error() -> None:
+    """Test that error messages are truncated if too long."""
+    tracer, exporter = _workflow_tracer_from_memory_exporter()
+    long_error = "e" * 150  # Longer than 100 characters
+    with workflow_run_span(tracer, "wf-error", run_id="run-error") as span:
+        summary = generate_run_summary(
+            span=span,
+            workflow_id="wf-error",
+            run_id="run-error",
+            outcome="failure",
+            high_level_steps=["init", "process"],
+            error_message=long_error,
+        )
+    
+    assert summary.outcome == "failure"
+    assert summary.error_message is not None
+    assert len(summary.error_message) == 103  # 100 + "..."
+    assert summary.error_message.endswith("...")
+
+
+def test_run_summary_dataclass_to_dict() -> None:
+    """Test that RunSummary can be converted to dict for JSON export."""
+    summary = RunSummary(
+        workflow_id="wf-test",
+        run_id="run-test",
+        start_time="2024-01-01T00:00:00",
+        end_time="2024-01-01T00:01:00",
+        outcome="success",
+        high_level_steps=["step1", "step2"],
+        duration_ms=60000,
+    )
+    summary_dict = summary.__dict__
+    assert summary_dict["workflow_id"] == "wf-test"
+    assert summary_dict["outcome"] == "success"
+    assert "password" not in str(summary_dict)  # Ensure no secrets in dict
+>>>>>>> main

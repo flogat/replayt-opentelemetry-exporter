@@ -43,13 +43,16 @@ When emitting attributes, follow OpenTelemetry semantic conventions where applic
 - Use standard span names and attributes for workflow runs (e.g., `replayt.workflow.id`, `replayt.run.id`)
 - Reference [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) for standard attributes
 
-## Implementation Notes
+## Run Summary Artifact
 
-- The tracing module (`src/replayt_opentelemetry_exporter/tracing.py`) should validate attributes before emitting
-- Tests should verify that sensitive attributes are not emitted
-- This policy should be reviewed regularly and updated as needed
+The `RunSummary` dataclass in `tracing.py` provides a PM- and support-facing summary artifact that excludes secret-bearing fields. It includes:
+- Workflow and run identifiers (public)
+- Timestamps (ISO 8601)
+- Outcome (e.g., "success", "failure")
+- High-level steps (list of step names)
+- Duration in milliseconds
+- Safe error messages (truncated to 100 characters)
 
-## References
+All fields in `RunSummary` are non-secret and follow the redaction policy. The `generate_run_summary` function ensures that error messages are truncated and no sensitive data is included.
 
-- DESIGN_PRINCIPLES.md - LLM/demos section on telemetry redaction
-- OpenTelemetry Semantic Conventions: https://opentelemetry.io/docs/specs/semconv/
+Example output (JSON):
