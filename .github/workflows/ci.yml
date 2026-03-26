@@ -1,5 +1,37 @@
-{
-  "aligned": true,
-  "feedback": "",
-  "suggested_step": null
-}
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      # Mission Control backlog workflows push mc/backlog-* before CI poll
+      - "mc/**"
+  pull_request:
+    branches:
+      - main
+      - master
+      - "mc/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package and dev deps
+        run: pip install -e ".[dev]"
+      - name: Ruff check
+        run: ruff check src tests
+      - name: Ruff format
+        run: ruff format --check src tests
+      - name: Run tests
+        run: pytest -q
