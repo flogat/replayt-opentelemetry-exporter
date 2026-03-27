@@ -109,7 +109,7 @@ Published instruments MUST use the names below unless a semver-major release cha
 | Histogram | `replayt.workflow.run.duration_ms` | Run duration in milliseconds. |
 | Counter | `replayt.exporter.errors_total` | Export or serialization failures and similar (e.g. `error_type` attribute). |
 
-Exact attribute keys for each instrument MUST be listed in the README once implementation matches this spec. Until then, the **Unreleased** section of [CHANGELOG.md](../CHANGELOG.md) and this table are the source of truth for names.
+Exact attribute keys for each instrument are listed in the [README](../README.md) **Metrics** section. This table is the normative instrument list; [CHANGELOG.md](../CHANGELOG.md) **Unreleased** records notable naming or semantics changes between releases.
 
 ## 6. Trace semantics (span naming)
 
