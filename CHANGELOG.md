@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `workflow_run_span` optional `attributes` are validated for export: blocked keys (credentials-style names per [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md)) are omitted; long string values truncate at 100 characters; `replayt.workflow.id` / `replayt.run.id` cannot be overridden via the `attributes` dict.
+
 ### Documentation
 - Added [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) specifying the stable public API (`__all__`), replayt integration seam, `workflow_run_span` run-boundary behavior, canonical metric instrument names, version expectations, and Builder acceptance criteria. README now links to the spec and aligns the metrics summary with that document.
 - Phase **2** spec pass: backlog acceptance mapping (§1.1), normative `workflow_run_span` signature and ordered lifecycle, `get_workflow_tracer` instrumentation-scope rules, compatibility snapshot table (with replayt **0.4.25** baseline reference), README **Public surface at a glance** and **Version compatibility**.
+- Phase **3** builder: CI logs resolved replayt version; spec §7.2–7.3 and README **Version compatibility** describe CI vs reference snapshot; SECURITY_REDACTION documents `workflow_run_span` attribute filtering.
 
 ### Fixed
 - Resolved merge conflicts in `tracing.py` and `tests/test_tracing.py`. `workflow_run_span` uses `start_as_current_span` so spans end correctly on success and error paths (still re-raising after metrics and span error recording).

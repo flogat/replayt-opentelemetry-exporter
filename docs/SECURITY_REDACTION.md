@@ -36,6 +36,10 @@ When working with LLM workflows, additional redaction rules apply (see [DESIGN_P
 - **Safe to emit**: Model identifiers (e.g., "gpt-4"), token counts, latency measurements, and high-level error categories
 - **Hash/Truncate**: If debugging requires partial content visibility, truncate to a fixed length (e.g., first 100 characters) and hash the remainder
 
+## Optional span attributes (`workflow_run_span`)
+
+Extra string attributes passed as `workflow_run_span(..., attributes={...})` are filtered in code: keys that match the **Never emit** patterns (for example `api_key`, names ending in `_token`, or containing `password`) are dropped; remaining string values longer than **100** characters are truncated. Canonical keys `replayt.workflow.id` and `replayt.run.id` come only from the `workflow_id` and `run_id` parameters so callers cannot override them via `attributes`.
+
 ## OpenTelemetry Semantic Conventions
 
 When emitting attributes, follow OpenTelemetry semantic conventions where applicable:

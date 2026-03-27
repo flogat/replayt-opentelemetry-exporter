@@ -112,14 +112,14 @@ workflow_run_span(
 | `workflow_id` | Required logical workflow identifier; becomes span attribute `replayt.workflow.id` and low-cardinality metric label `workflow_id`. |
 | `run_id` | Optional; when set, span attribute `replayt.run.id` and optional metric label `run_id`. |
 | `span_name` | Optional override of the default span name (`replayt.workflow.run`); use for disambiguation only—default keeps backends consistent. |
-| `attributes` | Optional extra string attributes merged onto the span after validation against [SECURITY_REDACTION.md](SECURITY_REDACTION.md); until redaction is implemented, document any passthrough as **TODO** in release notes if behavior is permissive. |
+| `attributes` | Optional extra string attributes merged onto the span after validation against [SECURITY_REDACTION.md](SECURITY_REDACTION.md) (blocked keys omitted, long values truncated; see that document). |
 
 The context manager **yields** the active `Span` so callers can attach events or call `generate_run_summary` while the span is open.
 
 ### 4.1 Span lifecycle
 
 - **Start:** When the context manager is entered, the implementation starts a span with name `span_name` (default `replayt.workflow.run`).
-- **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy; stub validation MAY pass through until implemented—call out in CHANGELOG when tightened).
+- **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy and [CHANGELOG.md](../CHANGELOG.md) when rules change).
 - **Success:** If the block exits without an exception, set span status to **OK**, end the span, and record **success** outcome metrics (see §5).
 - **Failure:** If the block raises, set span status to **ERROR** (with a safe description), call `record_exception` (or equivalent) on the span, end the span, record **failure** outcome metrics, then **re-raise** the exception. Integrators’ error handling is unchanged.
 
@@ -167,8 +167,8 @@ Exact attribute keys for each instrument are listed in the [README](../README.md
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
 
-- CI or release documentation SHOULD record at least one **tested** replayt version (e.g. the version installed in CI or printed in the workflow log).
-- **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until CI pins otherwise.
+- CI prints the resolved **replayt** version after `pip install` (see the `test` job step **Print replayt version**). That line is the **tested** version for that workflow run.
+- **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until you add an upper pin or lockfile.
 - When this repository claims support for a specific replayt line in README, update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
 ### 7.3 Compatibility snapshot (copy for releases)
@@ -180,7 +180,8 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 | Python | `requires-python` (currently `>=3.11`) | CI matrices may test a subset. |
 | OpenTelemetry API/SDK | `>=1.20.0` | Same major line expected; document any new major in CHANGELOG. |
 | replayt | `>=0.1.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
-| Tested replayt (reference) | **0.4.25** (baseline log) | Replace with “CI pinned” version when `ci.yml` or lockfiles fix a version. |
+| Tested replayt (CI) | Printed in CI after install | Latest satisfying `>=0.1.0` unless you add a pin or lockfile. |
+| Reference replayt (examples) | **0.4.25** (baseline log) | Update when README claims a different line. |
 
 ### 7.4 TODO allowed
 

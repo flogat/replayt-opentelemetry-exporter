@@ -33,7 +33,7 @@ Declared dependency ranges live in **`pyproject.toml`**. At a high level:
 - **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` `>=1.20.0`.
 - **replayt:** `>=0.1.0` (upper bound **TODO** until a breaking replayt release is validated here).
 
-A **reference tested replayt** version (**0.4.25**) appears in Mission Control baseline logs; CI should eventually pin or assert the version this repo actually tests—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.
+CI installs the latest **replayt** matching `>=0.1.0` from PyPI (see the workflow log line `replayt <version>`). Mission Control baseline logs used **0.4.25** as the public API snapshot for examples until you pin otherwise—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.
 
 ## Design principles
 
@@ -64,7 +64,7 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-CI runs the same checks on Python 3.11 and 3.12 (see `.github/workflows/ci.yml`).
+CI runs the same checks on Python 3.12 (see `.github/workflows/ci.yml`). Each workflow run logs the resolved **replayt** wheel version after install.
 
 ## Enable tracing and metrics in development
 

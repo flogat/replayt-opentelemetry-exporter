@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from opentelemetry import metrics, trace
 from opentelemetry.metrics import Counter, Histogram, MeterProvider
@@ -21,10 +20,33 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import Span, Tracer
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
 logger = logging.getLogger(__name__)
+
+# Span attribute keys reserved for workflow_id / run_id parameters (extras must not override).
+_RESERVED_SPAN_ATTRIBUTE_KEYS = frozenset({"replayt.workflow.id", "replayt.run.id"})
+
+_EXACT_BLOCKED_ATTRIBUTE_KEYS = frozenset(
+    {
+        "password",
+        "passwd",
+        "secret",
+        "api_key",
+        "apikey",
+        "access_token",
+        "refresh_token",
+        "authorization",
+        "bearer",
+        "cookie",
+        "client_secret",
+        "private_key",
+        "prompt",
+        "completion",
+        "model_input",
+        "model_output",
+    }
+)
+
+_MAX_ATTRIBUTE_VALUE_LEN = 100
 
 # Global metrics instruments
 _run_counter: Counter | None = None
@@ -144,10 +166,34 @@ def get_workflow_tracer() -> Tracer:
     return tracer
 
 
+def _key_blocked_for_redaction(key: str) -> bool:
+    """Return True if the attribute key must not be emitted (SECURITY_REDACTION.md)."""
+    k = key.lower()
+    if k in _EXACT_BLOCKED_ATTRIBUTE_KEYS:
+        return True
+    if "password" in k or "passwd" in k:
+        return True
+    if "api_key" in k or "apikey" in k:
+        return True
+    if k.endswith("_token") or k.endswith("_secret"):
+        return True
+    return False
+
+
 def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
-    # TODO: Implement redaction according to SECURITY_REDACTION.md
-    # For now, just return the attributes as-is
-    return attributes
+    """Drop blocked keys and truncate long string values per SECURITY_REDACTION.md."""
+    out: dict[str, str] = {}
+    for key, value in attributes.items():
+        if key in _RESERVED_SPAN_ATTRIBUTE_KEYS:
+            continue
+        if _key_blocked_for_redaction(key):
+            logger.debug("Omitted span attribute key %r (redaction policy)", key)
+            continue
+        if len(value) > _MAX_ATTRIBUTE_VALUE_LEN:
+            out[key] = value[:_MAX_ATTRIBUTE_VALUE_LEN]
+        else:
+            out[key] = value
+    return out
 
 
 def record_run_outcome(
@@ -265,15 +311,15 @@ def workflow_run_span(
     run_id: str | None = None,
     span_name: str = "replayt.workflow.run",
     attributes: dict[str, str] | None = None,
-) -> Iterator[trace.Span]:
+) -> Iterator[Span]:
     start_time = time.time()
     with tracer.start_as_current_span(span_name) as span:
         span.set_attribute("replayt.workflow.id", workflow_id)
         if run_id:
             span.set_attribute("replayt.run.id", run_id)
         if attributes:
-            validated_attributes = _validate_attributes(attributes)
-            for key, value in validated_attributes.items():
+            validated = _validate_attributes(attributes)
+            for key, value in validated.items():
                 span.set_attribute(key, value)
         try:
             yield span

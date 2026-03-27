@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+import pytest
 from opentelemetry import metrics, trace
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import InMemoryMetricReader
@@ -9,11 +10,11 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
-from opentelemetry.trace import Tracer
+from opentelemetry.trace import StatusCode, Tracer
 
+import replayt_opentelemetry_exporter.tracing as tracing_mod
 from replayt_opentelemetry_exporter.tracing import (
     RunSummary,
-    _validate_attributes,
     build_meter_provider,
     build_resource,
     build_tracer_provider,
@@ -124,6 +125,84 @@ def test_workflow_run_span_omits_run_id_when_none() -> None:
     assert "replayt.run.id" not in spans[0].attributes
 
 
+def test_workflow_run_span_custom_span_name() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(tracer, "wf-123", span_name="custom.run"):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].name == "custom.run"
+
+
+def test_workflow_run_span_reraises_same_exception() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with pytest.raises(ValueError, match="expected"):
+        with workflow_run_span(tracer, "wf-123"):
+            raise ValueError("expected")
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].status.status_code == StatusCode.ERROR
+
+
+def test_workflow_run_span_merges_extra_attributes() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(
+        tracer,
+        "wf-123",
+        attributes={"custom.dim": "us-east-1"},
+    ):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert spans[0].attributes["custom.dim"] == "us-east-1"
+
+
+def test_workflow_run_span_reserved_keys_in_attributes_do_not_override() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(
+        tracer,
+        "wf-canonical",
+        run_id="run-canonical",
+        attributes={
+            "replayt.workflow.id": "wf-evil",
+            "replayt.run.id": "run-evil",
+            "custom.dim": "ok",
+        },
+    ):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert spans[0].attributes["replayt.workflow.id"] == "wf-canonical"
+    assert spans[0].attributes["replayt.run.id"] == "run-canonical"
+    assert spans[0].attributes["custom.dim"] == "ok"
+
+
+def test_workflow_run_span_omits_blocked_attribute_keys() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(
+        tracer,
+        "wf-123",
+        attributes={"api_key": "secret-value", "region": "eu"},
+    ):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert "api_key" not in spans[0].attributes
+    assert spans[0].attributes["region"] == "eu"
+
+
+def test_workflow_run_span_truncates_long_attribute_values() -> None:
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    long_val = "x" * 150
+    with workflow_run_span(tracer, "wf-123", attributes={"note": long_val}):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert spans[0].attributes["note"] == "x" * 100
+
+
 def test_get_workflow_tracer_uses_global_provider() -> None:
     previous = trace.get_tracer_provider()
     try:
@@ -133,6 +212,22 @@ def test_get_workflow_tracer_uses_global_provider() -> None:
         assert tracer is not None
     finally:
         trace.set_tracer_provider(previous)
+
+
+def _tracer_scope_name(tracer: Tracer) -> str:
+    scope = getattr(tracer, "instrumentation_scope", None) or getattr(
+        tracer, "_instrumentation_scope", None
+    )
+    assert scope is not None
+    return scope.name
+
+
+def test_get_workflow_tracer_uses_stable_instrumentation_scope_name() -> None:
+    """Instrumentation scope string matches the tracing submodule (PUBLIC_API_SPEC §3.1)."""
+    t1 = get_workflow_tracer()
+    t2 = trace.get_tracer(tracing_mod.__name__)
+    assert _tracer_scope_name(t1) == tracing_mod.__name__
+    assert _tracer_scope_name(t2) == tracing_mod.__name__
 
 
 def test_workflow_run_span_records_success_metrics() -> None:
@@ -306,7 +401,3 @@ def test_run_summary_dataclass_to_dict() -> None:
     assert summary_dict["workflow_id"] == "wf-test"
     assert summary_dict["outcome"] == "success"
     assert "password" not in str(summary_dict)
-
-
-def test_validate_attributes_pass_through() -> None:
-    assert _validate_attributes({"k": "v"}) == {"k": "v"}
