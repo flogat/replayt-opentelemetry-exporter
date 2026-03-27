@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Added [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) specifying the stable public API (`__all__`), replayt integration seam, `workflow_run_span` run-boundary behavior, canonical metric instrument names, version expectations, and Builder acceptance criteria. README now links to the spec and aligns the metrics summary with that document.
 
+### Fixed
+- Resolved merge conflicts in `tracing.py` and `tests/test_tracing.py`. `workflow_run_span` uses `start_as_current_span` so spans end correctly on success and error paths (still re-raising after metrics and span error recording).
+- Metric instruments now use the canonical names from the public spec: `replayt.workflow.run.outcomes_total`, `replayt.workflow.run.duration_ms`, and `replayt.exporter.errors_total`.
+
+### Changed
+- `build_meter_provider` and `install_meter_provider` accept optional `metric_readers` (for example `InMemoryMetricReader` in unit tests) in addition to `metric_exporters`, consistent with OpenTelemetry Python SDK types.
+
 ### Added
 - Counter metric `replayt.workflow.run.outcomes_total` (labels: `outcome`="success|failure", `workflow_id`) to track completed and failed workflow runs.
 - Histogram metric `replayt.workflow.run.duration_ms` (labels: `outcome`, `workflow_id`) to track run durations.

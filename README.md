@@ -76,7 +76,7 @@ CI runs the same checks on Python 3.11 and 3.12 (see `.github/workflows/ci.yml`)
 
 3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend.
 
-For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`.
+For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`. For in-process metric assertions, pass `metric_readers=[InMemoryMetricReader()]` to `build_meter_provider`; OTLP and similar backends keep using `metric_exporters`.
 
 ## Metrics
 
@@ -90,7 +90,13 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 
 ### Metric attributes and cardinality
 
-- Prefer stable **workflow** and **run** identifiers that are safe to emit; align attribute keys with the spec and README once implementation matches.
+| Instrument | Attributes (string keys) |
+| ---------- | ------------------------ |
+| `replayt.workflow.run.outcomes_total` | `outcome` (`success` / `failure`), `workflow_id`; optional `run_id` when the integrator supplies one |
+| `replayt.workflow.run.duration_ms` | `outcome`, `workflow_id`; optional `run_id` |
+| `replayt.exporter.errors_total` | `error_type`; optional `workflow_id`, `run_id` |
+
+- Prefer stable **workflow** and **run** identifiers that are safe to emit.
 - Keep labels **low-cardinality**; do not put unbounded or secret-bearing values on metrics. See [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md).
 
 ## Security considerations

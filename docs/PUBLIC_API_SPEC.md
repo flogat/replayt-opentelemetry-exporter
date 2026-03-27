@@ -37,9 +37,9 @@ The importable package is **`replayt_opentelemetry_exporter`**. The following sy
 | `__version__` | Package version string. |
 | `build_resource` | Build `Resource` for tracer/meter providers (service name, optional extra attributes). |
 | `build_tracer_provider` | Construct `TracerProvider` with optional `SpanExporter` list (no global side effects). |
-| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (no global side effects). |
+| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). |
 | `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. |
-| `install_meter_provider` | Install meter provider on the global `opentelemetry.metrics` API. |
+| `install_meter_provider` | Install meter provider on the global `opentelemetry.metrics` API. Accepts the same exporter/reader options as `build_meter_provider`. |
 | `get_workflow_tracer` | Return a `Tracer` from the **currently installed** global tracer provider (workflow-scoped naming is convention, not a separate type). |
 | `workflow_run_span` | Context manager: one OpenTelemetry span for a single workflow run, with metrics side effects as specified in §4. |
 | `RunSummary` | Dataclass for a safe, non-secret run summary (see [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md)). |
