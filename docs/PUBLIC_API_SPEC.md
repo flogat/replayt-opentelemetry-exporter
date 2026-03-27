@@ -7,6 +7,16 @@ Implementations MUST match it before we treat the API as stable for integrators.
 
 Integrators need a **small, documented** way to attach OpenTelemetry **traces and metrics** to replayt workflow runs at **clear run boundaries**, without changing replayt core. This package provides that as an optional adapter.
 
+### 1.1 Backlog acceptance mapping
+
+The backlog item *Define public exporter API and replayt integration seam* is satisfied for documentation when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Public API listed with minimal examples | **README** ([Enable tracing and metrics in development](../README.md#enable-tracing-and-metrics-in-development)), **§3** (symbol table), **§3.3** (normative example) |
+| Run-boundary behavior (start/end, error path) | **§4** (span lifecycle, ordered steps, re-raise rule) |
+| Version expectations (or explicit TODO where unavoidable) | **§7** and README **Version compatibility**; TODOs only for unknown upper bounds |
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -40,23 +50,22 @@ The importable package is **`replayt_opentelemetry_exporter`**. The following sy
 | `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). |
 | `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. |
 | `install_meter_provider` | Install meter provider on the global `opentelemetry.metrics` API. Accepts the same exporter/reader options as `build_meter_provider`. |
-| `get_workflow_tracer` | Return a `Tracer` from the **currently installed** global tracer provider (workflow-scoped naming is convention, not a separate type). |
+| `get_workflow_tracer` | Return a `Tracer` from the **currently installed** global tracer provider, using a **stable instrumentation scope name** (implementation-defined string that MUST stay stable across minor releases—see §3.1). |
 | `workflow_run_span` | Context manager: one OpenTelemetry span for a single workflow run, with metrics side effects as specified in §4. |
 | `RunSummary` | Dataclass for a safe, non-secret run summary (see [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md)). |
 | `generate_run_summary` | Build a `RunSummary` from span and run metadata (see [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md)). |
+| `record_run_outcome` | Record run outcome metrics when the integrator does not use `workflow_run_span` for the whole run (advanced; requires a meter provider whose instruments were created by `build_meter_provider` / `install_meter_provider`). |
+| `record_exporter_error` | Record exporter health / export failure signals (advanced; same meter-provider requirement as `record_run_outcome`). |
 
-### 3.1 Optional / advanced symbols
+### 3.1 `get_workflow_tracer` instrumentation scope
 
-These MAY be public if the implementation already exposes them for tests or custom exporters; if they remain public, they MUST be listed in `__all__` and documented here:
+`get_workflow_tracer()` MUST resolve its `Tracer` via `opentelemetry.trace.get_tracer(name)` (or equivalent) using a **single stable scope string** for this package. Patch releases MAY not rename that string; if it changes in a minor release, document the migration in [CHANGELOG.md](../CHANGELOG.md). The current implementation uses the tracing submodule’s `__name__` (`replayt_opentelemetry_exporter.tracing`); treat that as the de facto scope until README lists an explicit constant.
 
-| Symbol | Role |
-| ------ | ---- |
-| `record_run_outcome` | Record run outcome metrics when a span context manager is not used (advanced). |
-| `record_exporter_error` | Record exporter health / export failure signals (advanced). |
+### 3.2 Optional / future-only symbols
 
-If the project later narrows the surface, removing a symbol is a **semver-major** change unless it was explicitly undocumented and prefixed as private.
+If the project later adds more public helpers, they MUST be listed in `__all__` and in this section or the main table before the release ships. Removing any symbol listed in §3 is a **semver-major** change unless it was explicitly marked private (for example a leading underscore) and never documented here.
 
-### 3.2 Minimal integrator example (normative pattern)
+### 3.3 Minimal integrator example (normative pattern)
 
 ```python
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -84,12 +93,44 @@ Optional dependency: OTLP HTTP exporters are not in the core dependency set; int
 
 Integrators MUST be able to rely on the following semantics.
 
+### 4.0 Context manager signature (normative)
+
+```text
+workflow_run_span(
+    tracer: Tracer,
+    workflow_id: str,
+    *,
+    run_id: str | None = None,
+    span_name: str = "replayt.workflow.run",
+    attributes: dict[str, str] | None = None,
+) -> Iterator[Span]
+```
+
+| Parameter | Requirement |
+| --------- | ----------- |
+| `tracer` | OpenTelemetry `Tracer` used to create the run span (typically from `get_workflow_tracer()` after installing a provider). |
+| `workflow_id` | Required logical workflow identifier; becomes span attribute `replayt.workflow.id` and low-cardinality metric label `workflow_id`. |
+| `run_id` | Optional; when set, span attribute `replayt.run.id` and optional metric label `run_id`. |
+| `span_name` | Optional override of the default span name (`replayt.workflow.run`); use for disambiguation only—default keeps backends consistent. |
+| `attributes` | Optional extra string attributes merged onto the span after validation against [SECURITY_REDACTION.md](SECURITY_REDACTION.md); until redaction is implemented, document any passthrough as **TODO** in release notes if behavior is permissive. |
+
+The context manager **yields** the active `Span` so callers can attach events or call `generate_run_summary` while the span is open.
+
 ### 4.1 Span lifecycle
 
-- **Start:** When the context manager is entered, the implementation starts a span (default name `replayt.workflow.run`, overridable via a documented parameter).
-- **Attributes:** Set at least `replayt.workflow.id` from the required `workflow_id` argument. If `run_id` is provided, set `replayt.run.id`. Optional caller-supplied string attributes MAY be merged after validation against [SECURITY_REDACTION.md](SECURITY_REDACTION.md) (validation may be TODO only where explicitly documented).
+- **Start:** When the context manager is entered, the implementation starts a span with name `span_name` (default `replayt.workflow.run`).
+- **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy; stub validation MAY pass through until implemented—call out in CHANGELOG when tightened).
 - **Success:** If the block exits without an exception, set span status to **OK**, end the span, and record **success** outcome metrics (see §5).
 - **Failure:** If the block raises, set span status to **ERROR** (with a safe description), call `record_exception` (or equivalent) on the span, end the span, record **failure** outcome metrics, then **re-raise** the exception. Integrators’ error handling is unchanged.
+
+### 4.1.1 Ordered lifecycle (normative sequence)
+
+1. **Enter:** Open a span as the current span (`start_as_current_span` or equivalent).
+2. **Annotate:** Apply `replayt.workflow.id`, optional `replayt.run.id`, and validated extra attributes.
+3. **Run:** Execute the integrator’s block (`yield` the span).
+4. **Success path:** On normal completion, set status OK, compute duration, record success metrics, exit the context manager (span ends).
+5. **Error path:** On exception, set status ERROR, `record_exception`, compute duration, record failure metrics, **re-raise** the same exception, then end the span as part of context exit.
+6. **Metrics dependency:** Outcome and duration instruments MUST target the global meter provider state established by `install_meter_provider` (or test doubles)—see §4.3.
 
 ### 4.2 Nesting and concurrency
 
@@ -126,22 +167,34 @@ Exact attribute keys for each instrument are listed in the [README](../README.md
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
 
-- CI or release documentation SHOULD record at least one **tested** replayt version (e.g. the version installed in CI). As of spec authoring, automated extraction referenced replayt **0.4.25** as a representative public API snapshot; the Builder MUST align CI and README with whatever version is actually exercised after merge.
-- If a replayt release changes public types used in examples, update examples and this spec’s §2.2 in the same release branch—**no TODO** once that version is claimed supported.
+- CI or release documentation SHOULD record at least one **tested** replayt version (e.g. the version installed in CI or printed in the workflow log).
+- **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until CI pins otherwise.
+- When this repository claims support for a specific replayt line in README, update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
-### 7.3 TODO allowed
+### 7.3 Compatibility snapshot (copy for releases)
 
-- Exact upper bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md) or here until validated.
+Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` at spec time; **maintainers update this table** when bounds change.
+
+| Component | Declared bound | Notes |
+| --------- | ---------------- | ----- |
+| Python | `requires-python` (currently `>=3.11`) | CI matrices may test a subset. |
+| OpenTelemetry API/SDK | `>=1.20.0` | Same major line expected; document any new major in CHANGELOG. |
+| replayt | `>=0.1.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
+| Tested replayt (reference) | **0.4.25** (baseline log) | Replace with “CI pinned” version when `ci.yml` or lockfiles fix a version. |
+
+### 7.4 TODO allowed
+
+- Exact **upper** bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md) or here until validated.
 
 ## 8. Acceptance criteria (for Builder / QA)
 
-The backlog is satisfied when all of the following are true:
+The **documentation** backlog (phase 2) is complete when §1.1 holds. The **implementation** backlog (phase 3 onward) is complete when all of the following are true:
 
-1. **Public API listed** — README links to this document and shows a minimal end-to-end example consistent with §3.2.
-2. **`__all__` matches §3** — All symbols in §3 appear in package `__all__` (plus any §3.1 symbols that ship as public).
-3. **Run boundaries** — Behavior matches §4 (success path, error path with re-raise, span ended).
-4. **Versions** — README or this doc states dependency ranges from `pyproject.toml` and a tested replayt line per §7.2.
-5. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, success/failure metrics, and provider installation at least at the level of current `tests/test_tracing.py` intent.
+1. **Public API listed** — README links to this document and shows a minimal end-to-end example consistent with §3.3.
+2. **`__all__` matches §3** — Every symbol named in the §3 table appears in package `__all__`.
+3. **Run boundaries** — Behavior matches §4 (success path, error path with re-raise, span ended, metrics recorded per §4.1.1).
+4. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3.
+5. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, success/failure metrics, and provider installation at least at the level of `tests/test_tracing.py` intent.
 6. **Docs consistency** — README metric names and descriptions align with §5 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 
 ## 9. Related documents

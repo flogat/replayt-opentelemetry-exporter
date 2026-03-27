@@ -13,6 +13,28 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
 - **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See the example in **Enable tracing and metrics in development** below.
 
+### Public surface at a glance
+
+These symbols are the intended stable exports (see the spec for parameters and semantics):
+
+| Area | Symbols |
+| ---- | ------- |
+| Version | `__version__` |
+| Resource / providers | `build_resource`, `build_tracer_provider`, `build_meter_provider`, `install_tracer_provider`, `install_meter_provider` |
+| Run boundary | `get_workflow_tracer`, `workflow_run_span` |
+| Run summary | `RunSummary`, `generate_run_summary` |
+| Advanced metrics | `record_run_outcome`, `record_exporter_error` |
+
+## Version compatibility
+
+Declared dependency ranges live in **`pyproject.toml`**. At a high level:
+
+- **Python:** `>=3.11` (`requires-python`).
+- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` `>=1.20.0`.
+- **replayt:** `>=0.1.0` (upper bound **TODO** until a breaking replayt release is validated here).
+
+A **reference tested replayt** version (**0.4.25**) appears in Mission Control baseline logs; CI should eventually pin or assert the version this repo actually tests—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.
+
 ## Design principles
 
 **[docs/DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md)** covers **replayt** compatibility, versioning, and (for showcases)
