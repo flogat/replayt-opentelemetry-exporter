@@ -120,8 +120,8 @@ The context manager **yields** the active `Span` so callers can attach events or
 
 - **Start:** When the context manager is entered, the implementation starts a span with name `span_name` (default `replayt.workflow.run`).
 - **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy and [CHANGELOG.md](../CHANGELOG.md) when rules change).
-- **Success:** If the block exits without an exception, set span status to **OK**, end the span, and record **success** outcome metrics (see §5).
-- **Failure:** If the block raises, set span status to **ERROR** (with a safe description), call `record_exception` (or equivalent) on the span, end the span, record **failure** outcome metrics, then **re-raise** the exception. Integrators’ error handling is unchanged.
+- **Success:** If the block exits without an exception, set span status to **OK**, compute duration, record **success** outcome metrics (see §5), then end the span when the context manager exits (same ordering as §4.1.1 step 4).
+- **Failure:** If the block raises, set span status to **ERROR** (with a safe description), call `record_exception` (or equivalent) on the span, compute duration, record **failure** outcome metrics, **re-raise** the same exception, then end the span when the context manager exits (same ordering as §4.1.1 step 5). Integrators’ error handling is unchanged.
 
 ### 4.1.1 Ordered lifecycle (normative sequence)
 
