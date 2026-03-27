@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase **5** architect: PUBLIC_API_SPEC §4.1 success/failure wording aligned with §4.1.1 and `workflow_run_span` (metrics and re-raise while the span is still active; span ends on context exit).
 
 ### Fixed
+- **Phase 6 (security):** `workflow_run_span` sets span ERROR status to the exception **type name** only (not full `str(exc)`), matching [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §4.1 and reducing leakage via trace UIs. OpenTelemetry’s default `record_exception` / `set_status_on_exception` behavior on the run span is disabled so the status is not overwritten when the context manager re-raises.
 - Resolved merge conflicts in `tracing.py` and `tests/test_tracing.py`. `workflow_run_span` uses `start_as_current_span` so spans end correctly on success and error paths (still re-raising after metrics and span error recording).
 - Metric instruments now use the canonical names from the public spec: `replayt.workflow.run.outcomes_total`, `replayt.workflow.run.duration_ms`, and `replayt.exporter.errors_total`.
 

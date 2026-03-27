@@ -146,6 +146,19 @@ def test_workflow_run_span_reraises_same_exception() -> None:
     assert spans[0].status.status_code == StatusCode.ERROR
 
 
+def test_workflow_run_span_error_status_description_omits_message_body() -> None:
+    """Span status description must stay type-only so long or sensitive str(exc) is not exported."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    sensitive = "Bearer deadbeef" * 20
+    with pytest.raises(RuntimeError):
+        with workflow_run_span(tracer, "wf-123"):
+            raise RuntimeError(sensitive)
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert spans[0].status.description == "RuntimeError"
+    assert sensitive not in (spans[0].status.description or "")
+
+
 def test_workflow_run_span_merges_extra_attributes() -> None:
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(

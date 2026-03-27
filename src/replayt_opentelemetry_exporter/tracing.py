@@ -180,6 +180,11 @@ def _key_blocked_for_redaction(key: str) -> bool:
     return False
 
 
+def _safe_span_status_description(exc: BaseException) -> str:
+    """Short, non-message span status text (PUBLIC_API_SPEC §4.1; SECURITY_REDACTION)."""
+    return type(exc).__name__
+
+
 def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
     """Drop blocked keys and truncate long string values per SECURITY_REDACTION.md."""
     out: dict[str, str] = {}
@@ -313,7 +318,13 @@ def workflow_run_span(
     attributes: dict[str, str] | None = None,
 ) -> Iterator[Span]:
     start_time = time.time()
-    with tracer.start_as_current_span(span_name) as span:
+    # Disable OTel's default exception hook: it sets span status to f"{Type}: {exc}" on re-raise,
+    # which leaks arbitrary exception text; we record the exception and set a safe status below.
+    with tracer.start_as_current_span(
+        span_name,
+        record_exception=False,
+        set_status_on_exception=False,
+    ) as span:
         span.set_attribute("replayt.workflow.id", workflow_id)
         if run_id:
             span.set_attribute("replayt.run.id", run_id)
@@ -324,8 +335,8 @@ def workflow_run_span(
         try:
             yield span
         except Exception as e:
-            span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
             span.record_exception(e)
+            span.set_status(trace.Status(trace.StatusCode.ERROR, _safe_span_status_description(e)))
             duration_ms = (time.time() - start_time) * 1000
             record_run_outcome(
                 success=False,

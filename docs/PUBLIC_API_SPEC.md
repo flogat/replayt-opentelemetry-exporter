@@ -121,7 +121,7 @@ The context manager **yields** the active `Span` so callers can attach events or
 - **Start:** When the context manager is entered, the implementation starts a span with name `span_name` (default `replayt.workflow.run`).
 - **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy and [CHANGELOG.md](../CHANGELOG.md) when rules change).
 - **Success:** If the block exits without an exception, set span status to **OK**, compute duration, record **success** outcome metrics (see §5), then end the span when the context manager exits (same ordering as §4.1.1 step 4).
-- **Failure:** If the block raises, set span status to **ERROR** (with a safe description), call `record_exception` (or equivalent) on the span, compute duration, record **failure** outcome metrics, **re-raise** the same exception, then end the span when the context manager exits (same ordering as §4.1.1 step 5). Integrators’ error handling is unchanged.
+- **Failure:** If the block raises, call `record_exception` (or equivalent) on the span, set span status to **ERROR** with a **safe description** (exception type name only—no arbitrary `str(exc)` text), compute duration, record **failure** outcome metrics, **re-raise** the same exception, then end the span when the context manager exits (same ordering as §4.1.1 step 5). The implementation turns off OpenTelemetry’s default `set_status_on_exception` / automatic exception recording on the run span so the library’s status line is not overwritten with the full exception message when the context exits. Integrators’ error handling is unchanged.
 
 ### 4.1.1 Ordered lifecycle (normative sequence)
 
@@ -129,7 +129,7 @@ The context manager **yields** the active `Span` so callers can attach events or
 2. **Annotate:** Apply `replayt.workflow.id`, optional `replayt.run.id`, and validated extra attributes.
 3. **Run:** Execute the integrator’s block (`yield` the span).
 4. **Success path:** On normal completion, set status OK, compute duration, record success metrics, exit the context manager (span ends).
-5. **Error path:** On exception, set status ERROR, `record_exception`, compute duration, record failure metrics, **re-raise** the same exception, then end the span as part of context exit.
+5. **Error path:** On exception, `record_exception`, set status ERROR with a safe description (exception type only), compute duration, record failure metrics, **re-raise** the same exception, then end the span as part of context exit (OTel auto status/exception hooks for this span are disabled so the safe description survives re-raise).
 6. **Metrics dependency:** Outcome and duration instruments MUST target the global meter provider state established by `install_meter_provider` (or test doubles)—see §4.3.
 
 ### 4.2 Nesting and concurrency
