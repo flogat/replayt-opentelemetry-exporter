@@ -96,7 +96,7 @@ CI runs the same checks on Python 3.12 (see `.github/workflows/ci.yml`). Each wo
        ...  # e.g. replayt Runner / Workflow invocation
    ```
 
-3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend.
+3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend. Verify span **events** `replayt.workflow.run.started` and `replayt.workflow.run.completed` and completion attributes such as `replayt.workflow.outcome` (and on failures `replayt.workflow.error.type` / `replayt.workflow.failure.category`) so operators can see run start and outcome without reading raw exception messages in attributes. Names and semantics are defined in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6**.
 
 For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`. For in-process metric assertions, pass `metric_readers=[InMemoryMetricReader()]` to `build_meter_provider`; OTLP and similar backends keep using `metric_exporters`.
 

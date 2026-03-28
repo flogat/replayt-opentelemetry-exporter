@@ -17,6 +17,14 @@ The backlog item *Define public exporter API and replayt integration seam* is sa
 | Run-boundary behavior (start/end, error path) | **§4** (span lifecycle, ordered steps, re-raise rule) |
 | Version expectations (or explicit TODO where unavoidable) | **§7** and README **Version compatibility**; TODOs only for unknown upper bounds |
 
+The backlog item *Emit traces for replayt workflow run lifecycle with human-readable status* is satisfied for documentation when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Spans cover run start, success, and failure paths | **§6** (trace shape, lifecycle events, completion attributes) |
+| Failure surfaces use OTel status and/or safe, readable attributes | **§6.3**–**§6.4** (status, `replayt.workflow.outcome`, `replayt.workflow.error.type`, `replayt.workflow.failure.category`) |
+| No sensitive values in default lifecycle attributes | **§6.5** and [SECURITY_REDACTION.md](SECURITY_REDACTION.md) |
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -120,16 +128,16 @@ The context manager **yields** the active `Span` so callers can attach events or
 
 - **Start:** When the context manager is entered, the implementation starts a span with name `span_name` (default `replayt.workflow.run`).
 - **Attributes:** Set at least `replayt.workflow.id` from `workflow_id`. If `run_id` is provided, set `replayt.run.id`. If `attributes` is provided, merge keys after validation (see SECURITY policy and [CHANGELOG.md](../CHANGELOG.md) when rules change).
-- **Success:** If the block exits without an exception, set span status to **OK**, compute duration, record **success** outcome metrics (see §5), then end the span when the context manager exits (same ordering as §4.1.1 step 4).
-- **Failure:** If the block raises, call `record_exception` (or equivalent) on the span, set span status to **ERROR** with a **safe description** (exception type name only—no arbitrary `str(exc)` text), compute duration, record **failure** outcome metrics, **re-raise** the same exception, then end the span when the context manager exits (same ordering as §4.1.1 step 5). The implementation turns off OpenTelemetry’s default `set_status_on_exception` / automatic exception recording on the run span so the library’s status line is not overwritten with the full exception message when the context exits. Integrators’ error handling is unchanged.
+- **Success:** If the block exits without an exception, set span status to **OK**, apply **§6** lifecycle attributes and completion events, compute duration, record **success** outcome metrics (see §5), then end the span when the context manager exits (same ordering as §4.1.1 step 4).
+- **Failure:** If the block raises, call `record_exception` (or equivalent) on the span, set span status to **ERROR** with a **safe description** (exception type name only—no arbitrary `str(exc)` text), apply **§6** lifecycle attributes and completion events, compute duration, record **failure** outcome metrics, **re-raise** the same exception, then end the span when the context manager exits (same ordering as §4.1.1 step 5). The implementation turns off OpenTelemetry’s default `set_status_on_exception` / automatic exception recording on the run span so the library’s status line is not overwritten with the full exception message when the context exits. Integrators’ error handling is unchanged.
 
 ### 4.1.1 Ordered lifecycle (normative sequence)
 
 1. **Enter:** Open a span as the current span (`start_as_current_span` or equivalent).
 2. **Annotate:** Apply `replayt.workflow.id`, optional `replayt.run.id`, and validated extra attributes.
 3. **Run:** Execute the integrator’s block (`yield` the span).
-4. **Success path:** On normal completion, set status OK, compute duration, record success metrics, exit the context manager (span ends).
-5. **Error path:** On exception, `record_exception`, set status ERROR with a safe description (exception type only), compute duration, record failure metrics, **re-raise** the same exception, then end the span as part of context exit (OTel auto status/exception hooks for this span are disabled so the safe description survives re-raise).
+4. **Success path:** On normal completion, set span attributes and completion **span events** per **§6**, set status OK, compute duration, record success metrics, exit the context manager (span ends).
+5. **Error path:** On exception, `record_exception`, set span attributes and completion **span events** per **§6**, set status ERROR with a safe description (exception type only), compute duration, record failure metrics, **re-raise** the same exception, then end the span as part of context exit (OTel auto status/exception hooks for this span are disabled so the safe description survives re-raise).
 6. **Metrics dependency:** Outcome and duration instruments MUST target the global meter provider state established by `install_meter_provider` (or test doubles)—see §4.3.
 
 ### 4.2 Nesting and concurrency
@@ -177,10 +185,80 @@ Use one of: `export_failed`, `serialization_error`, `timeout`, `unknown`. The im
 
 Histogram exemplars are optional. Turn them on only when organizational policy allows and labels follow [SECURITY_REDACTION.md](SECURITY_REDACTION.md).
 
-## 6. Trace semantics (span naming)
+## 6. Workflow run trace lifecycle and human-readable status
 
-- Default span name: `replayt.workflow.run`.
-- Required attributes: `replayt.workflow.id`; optional `replayt.run.id` when the integrator has a run identifier.
+This section is the **specification** for backlog item *Emit traces for replayt workflow run lifecycle with human-readable status*. It normatively extends **§4** so operators and backends see **run start**, **milestones** (where recorded), and **completion** (success or failure) with **stable, low-cardinality** signals suitable for dashboards—without putting sensitive text in default span or event attributes.
+
+### 6.1 Goals
+
+- **Operators** can tell *that a run started*, *how it ended*, and *what class of failure* occurred without reading raw exception messages in attributes.
+- **Backends and UIs** can filter and group on documented attribute keys and event names (see **§6.6**).
+- **Defaults** stay aligned with [SECURITY_REDACTION.md](SECURITY_REDACTION.md): no credentials, prompts, or arbitrary exception text in lifecycle attributes or event attribute values.
+
+### 6.2 Trace shape (normative)
+
+- **Root span:** Exactly one root run span per `workflow_run_span` invocation, named `span_name` (default `replayt.workflow.run` per §4.0). Nested child spans are **optional** and **out of scope** for this backlog unless a future spec adds them; **milestones use span events** on this root span unless otherwise documented.
+- **Run start:** When the context manager opens the span, the implementation MUST add a span **event** named `replayt.workflow.run.started` (no required attributes—the workflow and run identifiers already live on the span as `replayt.workflow.id` / `replayt.run.id`).
+- **Milestones (during the run):** When the adapter observes replayt lifecycle hooks or when integrators record milestones through a **documented extension** (see §6.2.1), the implementation SHOULD add span **events** named `replayt.workflow.milestone` with attribute **`replayt.workflow.milestone.name`** whose value is a **low-cardinality** token from **§6.2.2** or another token that obeys **§6.6**. Milestones are **best-effort** until replayt surfaces are wired; the **minimum** required signals remain **started** + **completed** events and completion attributes.
+- **Completion (success):** Before the span ends on the success path, the implementation MUST set span attribute **`replayt.workflow.outcome`** = `success` and add a span **event** named `replayt.workflow.run.completed` with attribute **`replayt.workflow.outcome`** = `success` on the event.
+- **Completion (failure):** Before re-raising, the implementation MUST set span attributes **`replayt.workflow.outcome`** = `failure` and **`replayt.workflow.error.type`** = the exception’s **type name** (same string as the OTel status description in §4.1), SHOULD set **`replayt.workflow.failure.category`** per **§6.4**, and MUST add a span **event** named `replayt.workflow.run.completed` carrying the same **`replayt.workflow.outcome`**, **`replayt.workflow.error.type`**, and (when set) **`replayt.workflow.failure.category`** on the event. Do **not** put `str(exception)` or stack text in these attributes or event attributes.
+
+#### 6.2.1 Integrator-recorded milestones
+
+Until the package provides a dedicated helper, integrators MAY call `Span.add_event` on the span yielded by `workflow_run_span` to emit `replayt.workflow.milestone` events using the attribute rules above. If the package later adds a public helper (for example `record_workflow_milestone`), it MUST validate or normalize names per **§6.2.2** / **§6.6** and MUST be listed in **§3** before release.
+
+#### 6.2.2 Recommended `replayt.workflow.milestone.name` values
+
+These tokens are **recommended** for consistency across deployments; implementations and integrators MAY add **new** tokens only when they remain **low-cardinality** (operator guidance: tens of distinct values per deployment, not unbounded user strings).
+
+| Value | Meaning (informative) |
+| ----- | --------------------- |
+| `invoked` | Run/workflow execution handed to replayt (or equivalent entry). |
+| `awaiting_approval` | Run is blocked on human or external approval, if applicable. |
+| `executing` | Active execution phase. |
+| `finalizing` | Post-processing or cleanup before completion. |
+
+### 6.3 Span status vs attributes (human-readable)
+
+| Signal | Success path | Failure path |
+| ------ | ------------ | ------------ |
+| OTel **span status** | `StatusCode.OK` | `StatusCode.ERROR`, **description** = exception **type name** only (e.g. `ValueError`) — same rule as §4.1 |
+| Span attribute **`replayt.workflow.outcome`** | `success` | `failure` |
+| Span attribute **`replayt.workflow.error.type`** | *(omit)* | Exception **type name** (mirrors status description) |
+| Span attribute **`replayt.workflow.failure.category`** | *(omit)* | One of **§6.4** (recommended for dashboards) |
+
+Exception **events** (`record_exception`) may still carry message/stack per the SDK; treat that like other sensitive telemetry per [SECURITY_REDACTION.md](SECURITY_REDACTION.md).
+
+### 6.4 Failure category (`replayt.workflow.failure.category`)
+
+On failure, the implementation SHOULD set **`replayt.workflow.failure.category`** on the span and on the `replayt.workflow.run.completed` event to **one** of the following **normalized** values so UIs can bucket failures without parsing messages:
+
+| Value | Intended use |
+| ----- | ------------ |
+| `validation` | Invalid inputs, schema, or preconditions (e.g. `ValueError`, `TypeError`, `ContextSchemaError` when used as validation). |
+| `timeout` | Time limits exceeded (`TimeoutError` and similar). |
+| `cancelled` | Cooperative cancellation (`CancelledError` / task cancelled). |
+| `external_dependency` | Upstream I/O or third-party failures (e.g. connection errors), when distinguishable without logging secrets. |
+| `runtime` | Other programmatic errors not better classified above. |
+| `unknown` | Default when classification is not implemented or ambiguous. |
+
+Exact **exception-type → category** mapping is **implementation-defined** but MUST be **documented in source comments** and MUST **not** introduce secret or high-cardinality values. Replayt-specific types (for example `RunFailed`, `ApprovalPending`) SHOULD map to the closest category; refine mappings in patch releases without breaking attribute **keys**.
+
+### 6.5 Sensitive data (lifecycle)
+
+Lifecycle **span attributes** and **event attributes** defined in this section MUST NOT include: raw user input, prompts, completions, credentials, tokens, full exception messages, or unbounded stack text. Follow [SECURITY_REDACTION.md](SECURITY_REDACTION.md) for optional integrator-supplied attributes merged via §4.0.
+
+### 6.6 Cardinality and dashboard guidance
+
+- **Low-cardinality keys** suitable for filters, breakdowns, and alerts: `replayt.workflow.id` (per deployment policy), `replayt.workflow.outcome`, `replayt.workflow.failure.category`, `replayt.workflow.error.type` (bounded by code), event names `replayt.workflow.run.started`, `replayt.workflow.run.completed`, `replayt.workflow.milestone`.
+- **`replayt.run.id`:** Optional on the span; do not use unbounded unique values as a **routine** high-cardinality dashboard dimension unless your backend policy allows it.
+- **Span name:** Default `replayt.workflow.run` remains the primary trace selector for “one workflow run.”
+
+### 6.7 Span naming (summary)
+
+- Default span name: `replayt.workflow.run` (override per §4.0 only when disambiguation is needed).
+- Required span attributes (existing §4): `replayt.workflow.id`; optional `replayt.run.id` when the integrator supplies a run identifier.
+- Completion attributes **`replayt.workflow.outcome`** (and failure-only keys above) are **in addition** to §4’s required keys.
 
 ## 7. Version and compatibility expectations
 
@@ -214,18 +292,19 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 
 ## 8. Acceptance criteria (for Builder / QA)
 
-The **documentation** backlog (phase 2) is complete when §1.1 holds. The **implementation** backlog (phase 3 onward) is complete when all of the following are true:
+The **documentation** backlog (phase 2) is complete when §1.1 holds (both mapped backlog items). The **implementation** backlog (phase 3 onward) is complete when all of the following are true:
 
 1. **Public API listed** — README links to this document and shows a minimal end-to-end example consistent with §3.3.
 2. **`__all__` matches §3** — Every symbol named in the §3 table appears in package `__all__`.
 3. **Run boundaries** — Behavior matches §4 (success path, error path with re-raise, span ended, metrics recorded per §4.1.1).
-4. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3.
-5. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, success/failure metrics, and provider installation at least at the level of `tests/test_tracing.py` intent.
-6. **Docs consistency** — README metric names and descriptions align with §5 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
+4. **Lifecycle traces** — `workflow_run_span` emits the **§6** lifecycle events (`replayt.workflow.run.started`, `replayt.workflow.run.completed`) and sets **§6** completion span attributes on success and failure paths; failure path keeps OTel ERROR status with a **safe** description (exception type only) and sets **`replayt.workflow.failure.category`** per **§6.4** (`unknown` when no mapping applies).
+5. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3.
+6. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, lifecycle events/attributes per §6, success/failure metrics, and provider installation at least at the level of `tests/test_tracing.py` intent.
+7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 
 ## 9. Related documents
 
 - [MISSION.md](MISSION.md) — Scope and audiences.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — Narrow APIs and consumer-side maintenance.
 - [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) — `RunSummary` / `generate_run_summary`.
-- [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries.
+- [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).

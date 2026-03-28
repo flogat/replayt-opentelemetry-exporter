@@ -37,7 +37,7 @@ expectations on the **consumer-side** model described in the design principles.
 
 **In scope (this package owns)**
 
-- Emitting OpenTelemetry **traces and/or metrics** for replayt workflow runs using documented, minimal public surfaces.
+- Emitting OpenTelemetry **traces and/or metrics** for replayt workflow runs using documented, minimal public surfaces, including **lifecycle-oriented** traces (start, milestones where recorded, completion) with **human-readable, low-cardinality** status and attributes as specified in **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)** **§6**.
 - Documenting supported replayt and OpenTelemetry versions, and how to configure export (endpoints, resource attrs, and
   similar knobs as the API stabilizes).
 - **Consumer-side** compatibility: dependency pins, migration notes, and tests at the integration boundary with replayt.
