@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 from opentelemetry.trace import StatusCode, Tracer
+from replayt import ContextSchemaError, RunFailed
 
 import replayt_opentelemetry_exporter
 import replayt_opentelemetry_exporter.tracing as tracing_mod
@@ -104,6 +105,78 @@ def _workflow_tracer_from_memory_exporter() -> tuple[Tracer, InMemorySpanExporte
     return tracer, exporter, provider
 
 
+def _events_named(span, name: str) -> list:
+    return [e for e in span.events if e.name == name]
+
+
+def test_workflow_run_span_lifecycle_events_and_attributes_success() -> None:
+    """PUBLIC_API_SPEC §6 — started + completed events and success completion attributes."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(tracer, "wf-123", run_id="run-456"):
+        pass
+    provider.force_flush()
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    span = spans[0]
+    started = _events_named(span, "replayt.workflow.run.started")
+    completed = _events_named(span, "replayt.workflow.run.completed")
+    assert len(started) == 1
+    assert started[0].attributes == {} or started[0].attributes is None
+    assert len(completed) == 1
+    assert completed[0].attributes.get("replayt.workflow.outcome") == "success"
+    assert span.attributes.get("replayt.workflow.outcome") == "success"
+    assert "replayt.workflow.error.type" not in span.attributes
+    assert "replayt.workflow.failure.category" not in span.attributes
+
+
+def test_workflow_run_span_lifecycle_events_and_attributes_failure() -> None:
+    """PUBLIC_API_SPEC §6 — failure path completion event mirrors span completion attributes."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with pytest.raises(ValueError, match="boom"):
+        with workflow_run_span(tracer, "wf-123", run_id="run-456"):
+            raise ValueError("boom")
+    provider.force_flush()
+    span = exporter.get_finished_spans()[0]
+    assert _events_named(span, "replayt.workflow.run.started")
+    completed = _events_named(span, "replayt.workflow.run.completed")
+    assert len(completed) == 1
+    attrs = completed[0].attributes
+    assert attrs.get("replayt.workflow.outcome") == "failure"
+    assert attrs.get("replayt.workflow.error.type") == "ValueError"
+    assert attrs.get("replayt.workflow.failure.category") == "validation"
+    assert span.attributes.get("replayt.workflow.outcome") == "failure"
+    assert span.attributes.get("replayt.workflow.error.type") == "ValueError"
+    assert span.attributes.get("replayt.workflow.failure.category") == "validation"
+
+
+@pytest.mark.parametrize(
+    ("exc_factory", "expected_category"),
+    [
+        (lambda: TimeoutError(), "timeout"),
+        (lambda: ConnectionError(), "external_dependency"),
+        (lambda: RunFailed(), "runtime"),
+        (lambda: ContextSchemaError("step", []), "validation"),
+        (lambda: KeyError("missing"), "unknown"),
+    ],
+)
+def test_workflow_run_span_failure_category_mapping(exc_factory, expected_category: str) -> None:
+    """PUBLIC_API_SPEC §6.4 — documented exception to failure.category mapping."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    exc = exc_factory()
+    with pytest.raises(type(exc)):
+        with workflow_run_span(tracer, "wf-cat"):
+            raise exc
+    provider.force_flush()
+    span = exporter.get_finished_spans()[0]
+    assert span.attributes.get("replayt.workflow.failure.category") == expected_category
+    assert (
+        _events_named(span, "replayt.workflow.run.completed")[0].attributes.get(
+            "replayt.workflow.failure.category"
+        )
+        == expected_category
+    )
+
+
 def test_package_all_exports_match_public_api_spec_section3() -> None:
     """Lock top-level exports to docs/PUBLIC_API_SPEC.md §3."""
     expected = frozenset(
@@ -135,6 +208,7 @@ def test_workflow_run_span_sets_attributes() -> None:
     assert spans[0].name == "replayt.workflow.run"
     assert spans[0].attributes["replayt.workflow.id"] == "wf-123"
     assert spans[0].attributes["replayt.run.id"] == "run-456"
+    assert spans[0].attributes["replayt.workflow.outcome"] == "success"
     assert spans[0].status.status_code == StatusCode.OK
 
 

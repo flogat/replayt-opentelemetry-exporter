@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import Iterator, Sequence
@@ -19,8 +20,16 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import Span, Tracer
+from replayt import ContextSchemaError, LogLockError, ReplaytError, RunFailed
 
 logger = logging.getLogger(__name__)
+
+# PUBLIC_API_SPEC §6 — lifecycle event names and completion attribute keys.
+_EVENT_WORKFLOW_RUN_STARTED = "replayt.workflow.run.started"
+_EVENT_WORKFLOW_RUN_COMPLETED = "replayt.workflow.run.completed"
+_ATTR_WORKFLOW_OUTCOME = "replayt.workflow.outcome"
+_ATTR_ERROR_TYPE = "replayt.workflow.error.type"
+_ATTR_FAILURE_CATEGORY = "replayt.workflow.failure.category"
 
 # Span attribute keys reserved for workflow_id / run_id parameters (extras must not override).
 _RESERVED_SPAN_ATTRIBUTE_KEYS = frozenset({"replayt.workflow.id", "replayt.run.id"})
@@ -195,6 +204,30 @@ def _safe_span_status_description(exc: BaseException) -> str:
     return type(exc).__name__
 
 
+def _workflow_failure_category(exc: BaseException) -> str:
+    """Map exceptions to PUBLIC_API_SPEC §6.4 ``replayt.workflow.failure.category`` values.
+
+    Order matters: more specific types before broader bases (e.g. ``ContextSchemaError``
+    before ``ReplaytError``). Unknown or ambiguous cases return ``unknown``; refine in
+    patch releases without changing attribute keys.
+    """
+    if isinstance(exc, (ValueError, TypeError, ContextSchemaError)):
+        return "validation"
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, asyncio.CancelledError):
+        return "cancelled"
+    if isinstance(exc, (ConnectionError, BrokenPipeError)):
+        return "external_dependency"
+    if isinstance(exc, RunFailed):
+        return "runtime"
+    if isinstance(exc, LogLockError):
+        return "runtime"
+    if isinstance(exc, ReplaytError):
+        return "runtime"
+    return "unknown"
+
+
 def _validate_attributes(attributes: dict[str, str]) -> dict[str, str]:
     """Drop blocked keys and truncate long string values per SECURITY_REDACTION.md."""
     out: dict[str, str] = {}
@@ -354,11 +387,25 @@ def workflow_run_span(
             validated = _validate_attributes(attributes)
             for key, value in validated.items():
                 span.set_attribute(key, value)
+        span.add_event(_EVENT_WORKFLOW_RUN_STARTED)
         try:
             yield span
         except Exception as e:
             span.record_exception(e)
-            span.set_status(trace.Status(trace.StatusCode.ERROR, _safe_span_status_description(e)))
+            err_type = _safe_span_status_description(e)
+            failure_category = _workflow_failure_category(e)
+            span.set_attribute(_ATTR_WORKFLOW_OUTCOME, "failure")
+            span.set_attribute(_ATTR_ERROR_TYPE, err_type)
+            span.set_attribute(_ATTR_FAILURE_CATEGORY, failure_category)
+            span.add_event(
+                _EVENT_WORKFLOW_RUN_COMPLETED,
+                {
+                    _ATTR_WORKFLOW_OUTCOME: "failure",
+                    _ATTR_ERROR_TYPE: err_type,
+                    _ATTR_FAILURE_CATEGORY: failure_category,
+                },
+            )
+            span.set_status(trace.Status(trace.StatusCode.ERROR, err_type))
             duration_ms = (time.time() - start_time) * 1000
             record_run_outcome(
                 success=False,
@@ -368,6 +415,11 @@ def workflow_run_span(
             )
             raise
         else:
+            span.set_attribute(_ATTR_WORKFLOW_OUTCOME, "success")
+            span.add_event(
+                _EVENT_WORKFLOW_RUN_COMPLETED,
+                {_ATTR_WORKFLOW_OUTCOME: "success"},
+            )
             span.set_status(trace.Status(trace.StatusCode.OK))
             duration_ms = (time.time() - start_time) * 1000
             record_run_outcome(

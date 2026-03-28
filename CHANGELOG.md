@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `workflow_run_span` emits [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6** lifecycle span events (`replayt.workflow.run.started`, `replayt.workflow.run.completed`) and sets completion attributes (`replayt.workflow.outcome`; on failure also `replayt.workflow.error.type` and `replayt.workflow.failure.category` with a documented exception-to-category map in `tracing.py`).
 - `record_exporter_error` maps `error_type` to the recommended set in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.3** (`export_failed`, `serialization_error`, `timeout`, `unknown`). Any other value is recorded as `unknown` so metric cardinality stays bounded; a debug log line notes the original value.
 - `workflow_run_span` optional `attributes` are validated for export: blocked keys (credentials-style names per [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md)) are omitted; long string values truncate at 100 characters; `replayt.workflow.id` / `replayt.run.id` cannot be overridden via the `attributes` dict.
 - `build_meter_provider` and `install_meter_provider` accept optional `metric_readers` (for example `InMemoryMetricReader` in unit tests) in addition to `metric_exporters`, consistent with OpenTelemetry Python SDK types.
