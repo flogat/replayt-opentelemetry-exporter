@@ -36,6 +36,14 @@ When working with LLM workflows, additional redaction rules apply (see [DESIGN_P
 - **Safe to emit**: Model identifiers (e.g., "gpt-4"), token counts, latency measurements, and high-level error categories
 - **Hash/Truncate**: If debugging requires partial content visibility, truncate to a fixed length (e.g., first 100 characters) and hash the remainder
 
+## Span status on errors (`workflow_run_span`)
+
+On failure, the span’s **status description** is the exception’s **type name** (for example `ValueError`), not the full exception message, so arbitrary error text is not promoted to a first-class status field. A standard OpenTelemetry **exception** event is still recorded (which may include message and stack trace per the SDK); integrators should treat that like other sensitive telemetry and configure backends and retention accordingly.
+
+## Optional span attributes (`workflow_run_span`)
+
+Extra string attributes passed as `workflow_run_span(..., attributes={...})` are filtered in code: keys that match the **Never emit** patterns (for example `api_key`, names ending in `_token`, or containing `password`) are dropped; remaining string values longer than **100** characters are truncated. Canonical keys `replayt.workflow.id` and `replayt.run.id` come only from the `workflow_id` and `run_id` parameters so callers cannot override them via `attributes`.
+
 ## OpenTelemetry Semantic Conventions
 
 When emitting attributes, follow OpenTelemetry semantic conventions where applicable:
