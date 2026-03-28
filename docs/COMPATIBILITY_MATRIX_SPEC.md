@@ -109,5 +109,6 @@ Maintainers MAY append dated rows when changing bounds:
 ## 7. Related documents
 
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam.
+- [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, and what the suite must prove at the replayt boundary.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — explicit contracts and consumer-side maintenance.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing dependency and validation notes.

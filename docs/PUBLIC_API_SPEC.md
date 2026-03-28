@@ -35,6 +35,16 @@ The backlog item *Emit traces for replayt workflow run lifecycle with human-read
 | Failure surfaces use OTel status and/or safe, readable attributes | **§6.3**–**§6.4** (status, `replayt.workflow.outcome`, `replayt.workflow.error.type`, `replayt.workflow.failure.category`) |
 | No sensitive values in default lifecycle attributes | **§6.5** and [SECURITY_REDACTION.md](SECURITY_REDACTION.md) |
 
+The backlog item *Implement automated tests for replayt boundary and exporter behavior* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Documented test command (e.g. pytest) and CI parity | [TESTING_SPEC.md](TESTING_SPEC.md) **§3**; README **Running tests and lint locally**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4** |
+| At least one success and one failure / export-error scenario | [TESTING_SPEC.md](TESTING_SPEC.md) **§4.3–§4.5** |
+| Clear exit codes for automation | [TESTING_SPEC.md](TESTING_SPEC.md) **§3.3** |
+
+Full test implementation is **Builder** work; this document’s §8 item **6** and [TESTING_SPEC.md](TESTING_SPEC.md) **§5** state the checklist.
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -311,12 +321,13 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds (both mappe
 3. **Run boundaries** — Behavior matches §4 (success path, error path with re-raise, span ended, metrics recorded per §4.1.1).
 4. **Lifecycle traces** — `workflow_run_span` emits the **§6** lifecycle events (`replayt.workflow.run.started`, `replayt.workflow.run.completed`) and sets **§6** completion span attributes on success and failure paths; failure path keeps OTel ERROR status with a **safe** description (exception type only) and sets **`replayt.workflow.failure.category`** per **§6.4** (`unknown` when no mapping applies).
 5. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§6** (compatibility matrix backlog) is satisfied for tables, justified bounds, and documented CI validation.
-6. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, lifecycle events/attributes per §6, success/failure metrics, and provider installation at least at the level of `tests/test_tracing.py` intent.
+6. **Tests** — Pytest passes without merge artifacts; obligations in **[TESTING_SPEC.md](TESTING_SPEC.md)** **§4–§5** are met (success path, failure path, exporter-error path, fakes/determinism, replayt public surface only). Span attributes, lifecycle events/attributes per §6, success/failure metrics, `__all__` parity, and provider installation remain covered as today’s `tests/test_tracing.py` / `tests/test_pyproject_dependencies.py` demonstrate—extend or split modules when scenarios grow.
 7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 
 ## 9. Related documents
 
 - [MISSION.md](MISSION.md) — Scope and audiences.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — Narrow APIs and consumer-side maintenance.
+- [TESTING_SPEC.md](TESTING_SPEC.md) — pytest strategy, replayt boundary tests, exporter error coverage, CI parity.
 - [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) — `RunSummary` / `generate_run_summary`.
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
