@@ -40,6 +40,10 @@ When working with LLM workflows, additional redaction rules apply (see [DESIGN_P
 
 On failure, the span’s **status description** is the exception’s **type name** (for example `ValueError`), not the full exception message, so arbitrary error text is not promoted to a first-class status field. A standard OpenTelemetry **exception** event is still recorded (which may include message and stack trace per the SDK); integrators should treat that like other sensitive telemetry and configure backends and retention accordingly.
 
+## Lifecycle attributes and events (workflow run)
+
+[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§6** defines **default** lifecycle signals: span attributes such as `replayt.workflow.outcome`, `replayt.workflow.error.type`, and `replayt.workflow.failure.category`, plus span **events** (`replayt.workflow.run.started`, `replayt.workflow.run.completed`, `replayt.workflow.milestone`). These defaults fall under **Safe to emit** when they use only the **documented** keys and **normalized** values (low-cardinality tokens, exception **type names**, not `str(exception)`). They MUST NOT carry raw prompts, credentials, PII, or unbounded free text. Optional integrator-supplied span attributes still pass through the `workflow_run_span(..., attributes={...})` filter described below.
+
 ## Optional span attributes (`workflow_run_span`)
 
 Extra string attributes passed as `workflow_run_span(..., attributes={...})` are filtered in code: keys that match the **Never emit** patterns (for example `api_key`, names ending in `_token`, or containing `password`) are dropped; remaining string values longer than **100** characters are truncated. Canonical keys `replayt.workflow.id` and `replayt.run.id` come only from the `workflow_id` and `run_id` parameters so callers cannot override them via `attributes`.
