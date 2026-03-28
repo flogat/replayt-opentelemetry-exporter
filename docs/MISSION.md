@@ -66,10 +66,11 @@ Concrete outcomes we optimize for:
 3. **Documented runbook** — The README describes how to enable the exporter and verify spans (and, when shipped,
    metrics) in a dev environment—operators and integrators should not need to read source to get a first successful
    export.
-4. **Aligned docs** — Mission, **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)**, and
-   **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)** stay consistent on consumer-side maintenance and
-   ecosystem role (this package stays compatible by pins, tests, and notes **here**; it does not steer replayt core—see
-   **Not a lever on core** in the design principles).
+4. **Aligned docs** — Mission, **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)**,
+   **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)**, and
+   **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, and the
+   documented public surface (this package stays compatible by pins, tests, and notes **here**; it does not steer
+   replayt core—see **Not a lever on core** in the design principles).
 
 Meeting these criteria means integrators can adopt the package with clear expectations, and maintainers can review
 changes without scope creep into replayt core.
