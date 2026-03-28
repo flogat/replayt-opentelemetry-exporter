@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Phase **3** builder (*Add compatibility matrix and dependency pins for replayt and OpenTelemetry*): [`.github/workflows/ci.yml`](.github/workflows/ci.yml) job **`test`** runs a **four-cell** `strategy.matrix` on Python 3.12 (replayt **0.4.0** and **latest** × OpenTelemetry API/SDK **1.20.0** and **1.40.0**), reinstalls pins after the editable install, and logs resolved **`replayt`**, **`opentelemetry-api`**, and **`opentelemetry-sdk`** versions before Ruff and pytest. Runtime deps: **`replayt>=0.4.0`** (failure-category mapping uses replayt types covered from that line); **`opentelemetry-api`** / **`opentelemetry-sdk`** and optional OTLP exporter **`>=1.20.0,<2`** until OpenTelemetry 2.x is validated and documented. README **Version compatibility**, [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4–§5**, and [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7 match the new bounds and matrix.
+
+### Added
+- Pytest module **`tests/test_pyproject_dependencies.py`** checks that installed wheels satisfy **`pyproject.toml`** runtime requirements and that OpenTelemetry specifiers stay below **2.0**.
+
 ### Documentation
 - Phase **2** spec (*Add compatibility matrix and dependency pins for replayt and OpenTelemetry*): [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) defines the normative **compatibility table** shape, **`pyproject.toml` justification** rules for replayt and OpenTelemetry, **CI matrix** obligations (vs current single-job resolver), and Spec vs Builder acceptance criteria; [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §1.1 maps the backlog here, §7 cross-links, §8 extends Builder checklist; README **Version compatibility** includes a snapshot table and points to the spec; [docs/DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) references the matrix spec under **Explicit contracts**.
 
@@ -21,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5.1–§5.6: metric instruments, attribute summary, `error_type` values and normalization behavior, cardinality, advanced recording APIs, exemplar policy. README **Metrics** states how non-recommended `error_type` strings map to `unknown`.
 - Added [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) specifying the stable public API (`__all__`), replayt integration seam, `workflow_run_span` run-boundary behavior, canonical metric instrument names, version expectations, and Builder acceptance criteria. README now links to the spec and aligns the metrics summary with that document.
 - Phase **2** spec pass: backlog acceptance mapping (§1.1), normative `workflow_run_span` signature and ordered lifecycle, `get_workflow_tracer` instrumentation-scope rules, compatibility snapshot table (with replayt **0.4.25** baseline reference), README **Public surface at a glance** and **Version compatibility**.
-- Phase **3** builder: CI logs resolved replayt version; spec §7.2–7.3 and README **Version compatibility** describe CI vs reference snapshot; SECURITY_REDACTION documents `workflow_run_span` attribute filtering.
 - Phase **5** architect (*Define public exporter API and replayt integration seam*): architecture review; MISSION **Aligned docs** now includes **[PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md)** with the other pillar docs.
 
 ### Fixed

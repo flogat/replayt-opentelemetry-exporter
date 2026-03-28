@@ -277,12 +277,12 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 ### 7.1 Declared in `pyproject.toml` (normative ranges)
 
 - **Python:** `requires-python` as specified in `[project]` (currently `>=3.11`).
-- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` lower bounds as in `[project.dependencies]` (currently `>=1.20.0`). Integrators MAY use newer API/SDK minors on the same major line; this package SHOULD stay compatible with supported OTel majors per release notes.
-- **replayt:** Lower bound as in `[project.dependencies]` (currently `>=0.1.0`). Upper bounds or caps MAY be added for known breakages.
+- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` as in `[project.dependencies]` (currently `>=1.20.0,<2`). Integrators MAY use newer 1.x minors within that range; a 2.x line requires a documented matrix and CHANGELOG entry before bounds widen.
+- **replayt:** Lower bound as in `[project.dependencies]` (currently `>=0.4.0`). Upper bounds or caps MAY be added for known breakages.
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
 
-- Until a **multi-version matrix** lands (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4**), CI prints the resolved **replayt** version after `pip install` (see `.github/workflows/ci.yml` `test` job step **Print replayt version**). That line is the **single tested resolver outcome** for that workflow run.
+- CI job **`.github/workflows/ci.yml`** **`test`** runs a **four-cell matrix** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell.
 - **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until README and the compatibility matrix claim a different line.
 - When this repository claims support for a specific replayt line in README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md), update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
@@ -293,9 +293,9 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
 | Python | `requires-python` (currently `>=3.11`) | CI matrices may test a subset. |
-| OpenTelemetry API/SDK | `>=1.20.0` | Same major line expected; document any new major in CHANGELOG. |
-| replayt | `>=0.1.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
-| Tested replayt (CI) | Printed in CI after install | Latest satisfying `>=0.1.0` unless you add a pin or lockfile. |
+| OpenTelemetry API/SDK | `>=1.20.0,<2` | Stay on 1.x until bounds and matrix explicitly cover 2.x. |
+| replayt | `>=0.4.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
+| Tested replayt (CI) | Matrix cells **0.4.0** and **latest** | See [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. |
 | Reference replayt (examples) | **0.4.25** (baseline log) | Update when README claims a different line. |
 
 ### 7.4 TODO allowed

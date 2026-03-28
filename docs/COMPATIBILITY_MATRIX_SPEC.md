@@ -71,13 +71,13 @@ If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-prot
 
 ## 4. How matrix updates are validated (CI and docs)
 
-### 4.1 Current baseline (documentary)
+### 4.1 Implemented matrix (current)
 
-Today, **[.github/workflows/ci.yml](../.github/workflows/ci.yml)** runs a **single** `test` job on Python 3.12, installs `pip install -e ".[dev]"`, prints the resolved **replayt** version (**Print replayt version** step), then runs Ruff and pytest. That proves **one** resolver outcome per push, not every cell of a multi-version matrix.
+**[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline.
 
-### 4.2 Target state (Builder obligation)
+### 4.2 Target state (Builder obligation) — satisfied
 
-The backlog is **fully** satisfied for automation when:
+The backlog automation obligations are met when items **1–3** below hold (this repository matches them as of phase **3**):
 
 1. **CI uses a `strategy.matrix`** (or equivalent) that runs **pytest** (and the same Ruff steps as today) for **each** claimed combination of:
    - **replayt** version pins (at least **minimum** supported and **latest** or **representative** lines as defined in this spec), and
@@ -97,7 +97,7 @@ Maintainers MAY append dated rows when changing bounds:
 
 | Date | Change | Rationale | Validated by |
 | ---- | ------ | --------- | ------------ |
-| *(example)* | Raised `replayt` lower bound to `>=0.4.0` | Uses `RunContext` from 0.4 | CI matrix cell `replayt==0.4.0` |
+| 2026-03-28 | `replayt` lower bound `>=0.4.0`; OTel API/SDK OTLP extra `>=1.20.0,<2` | Tests and `tracing.py` map `RunFailed`, `ContextSchemaError`, and related replayt types; cap OTel below 2 until a validated major bump | `.github/workflows/ci.yml` `test` matrix cells + [CHANGELOG.md](../CHANGELOG.md) **Unreleased** |
 
 ## 6. Acceptance criteria summary
 
