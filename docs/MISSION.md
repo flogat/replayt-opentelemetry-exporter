@@ -68,9 +68,10 @@ Concrete outcomes we optimize for:
    export.
 4. **Aligned docs** — Mission, **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)**,
    **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)**,
-   **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)**, and
-   **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, the
-   documented public surface, and version/matrix policy (this package stays compatible by pins, tests, and notes **here**; it does not steer
+   **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)**,
+   **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**, and
+   **[TESTING_SPEC.md](TESTING_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, the
+   documented public surface, version/matrix policy, and **what tests must prove** (this package stays compatible by pins, tests, and notes **here**; it does not steer
    replayt core—see **Not a lever on core** in the design principles).
 
 Meeting these criteria means integrators can adopt the package with clear expectations, and maintainers can review
