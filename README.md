@@ -12,6 +12,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 
 - **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
+- **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
 - **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See the example in **Enable tracing and metrics in development** below.
 
 ### Public surface at a glance
@@ -66,13 +67,15 @@ From the repository root after a dev install:
 
 ```bash
 pytest
-python -m ruff check .
-python -m ruff format --check .
+python -m ruff check src tests
+python -m ruff format --check src tests
 ```
 
 **Exit codes:** `pytest` exits **`0`** when all tests pass and **non-zero** on failure (standard pytest semantics). Normative test obligations (success vs failure vs exporter-error coverage, fakes, replayt boundary) live in **[docs/TESTING_SPEC.md](docs/TESTING_SPEC.md)**.
 
-CI runs the same checks on Python 3.12 (see `.github/workflows/ci.yml` job **`test`**). Each matrix cell reinstalls pinned **replayt** and OpenTelemetry API/SDK versions, then logs all three distributions before Ruff and pytest.
+**CI entry point:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — job **`test`** runs the Ruff and pytest commands above (after matrix pins) in **separate steps** so the Actions UI shows whether lint, format, or tests failed; see **[docs/CI_SPEC.md](docs/CI_SPEC.md)** for the full contract.
+
+CI runs those checks on Python 3.12 (job **`test`**). Each matrix cell reinstalls pinned **replayt** and OpenTelemetry API/SDK versions, then logs all three distributions before Ruff and pytest.
 
 ## Enable tracing and metrics in development
 
@@ -154,6 +157,7 @@ team's tooling.
 | `docs/PUBLIC_API_SPEC.md` | Public API, replayt seam, run boundaries, metric names, versions |
 | `docs/COMPATIBILITY_MATRIX_SPEC.md` | Compatibility matrix, dependency pin justification, CI validation policy |
 | `docs/TESTING_SPEC.md` | Pytest strategy, replayt boundary and exporter-error test obligations |
+| `docs/CI_SPEC.md` | CI step naming, Ruff + pytest commands, exit codes, safe logs |
 | `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present) |
 | `src/replayt_opentelemetry_exporter/` | Python package (import `replayt_opentelemetry_exporter`) |
 | `tests/` | Pytest suite |

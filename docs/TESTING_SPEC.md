@@ -31,11 +31,11 @@ pip install -e ".[dev]"
 pytest
 ```
 
-Match maintainer expectations with **`python -m ruff check .`** and **`python -m ruff format --check .`** (same as README **Running tests and lint locally**).
+Match maintainer expectations with **`python -m ruff check src tests`** and **`python -m ruff format --check src tests`** (same as README **Running tests and lint locally** and [CI_SPEC.md](CI_SPEC.md) **§3.1**).
 
 ### 3.2 CI parity
 
-The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** job **`test`**: each matrix cell runs Ruff then **the same `pytest` invocation** contributors use (no alternate test runner unless documented in this spec and README).
+The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** job **`test`**: each matrix cell runs Ruff then **the same `pytest` invocation** contributors use (no alternate test runner unless documented in this spec and README). **Step naming, exit-code propagation, and safe CI logs** for that job are normative in **[CI_SPEC.md](CI_SPEC.md)**.
 
 ### 3.3 Exit codes
 
@@ -94,5 +94,6 @@ The **implementation** backlog for this item is complete when all of the followi
 
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — run boundary, metrics, lifecycle, §8 Builder checklist.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — CI matrix and local reproduction.
+- [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest workflow steps, failure surfacing, CI log hygiene.
 - [README.md](../README.md) — contributor commands.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing notes when test obligations change.

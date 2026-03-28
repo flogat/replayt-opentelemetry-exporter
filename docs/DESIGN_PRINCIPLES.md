@@ -4,7 +4,7 @@ Hey, revise as the project matures. Defaults below are minimal—expand with rul
 
 1. **Explicit contracts** — Document supported replayt (and third-party framework) versions; test integration boundaries. The concrete public surface and version notes for this package live in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md). The **compatibility matrix**, **pin justification rules**, and **CI validation expectations** for replayt and OpenTelemetry live in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) (keep them aligned when bounds change).
 2. **Small public surfaces** — Prefer narrow APIs and documented extension points.
-3. **Observable automation** — Local scripts and CI produce clear logs and exit codes.
+3. **Observable automation** — Local scripts and CI produce clear logs and exit codes. Normative expectations for **GitHub Actions** step naming, Ruff + pytest invocations, and safe CI logs live in [CI_SPEC.md](CI_SPEC.md) (keep them aligned when workflows change).
 4. **Consumer-side maintenance** — Compatibility shims and pins live **here**; upstream changes are tracked with tests
    and changelog notes.
 5. **Not a lever on core** — This repo does not exist to steer replayt core; propose upstream changes through normal

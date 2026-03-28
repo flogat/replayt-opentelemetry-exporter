@@ -45,6 +45,16 @@ The backlog item *Implement automated tests for replayt boundary and exporter be
 
 Full test implementation is **Builder** work; this document’s §8 item **6** and [TESTING_SPEC.md](TESTING_SPEC.md) **§5** state the checklist.
 
+The backlog item *Add CI with ruff, tests, and readable logs* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Workflow runs Ruff and pytest (or documented equivalent) | [CI_SPEC.md](CI_SPEC.md) **§3.1**; [TESTING_SPEC.md](TESTING_SPEC.md) **§3**; README **Running tests and lint locally** |
+| Failures show which command failed; logs avoid secret dumps | [CI_SPEC.md](CI_SPEC.md) **§3.2–§3.4** |
+| README links to or describes the CI entry point | [CI_SPEC.md](CI_SPEC.md) **§3.5**; README links to `.github/workflows/ci.yml` and this spec |
+
+Implementing or adjusting workflow YAML is **Builder** work; [CI_SPEC.md](CI_SPEC.md) **§5** is the checklist.
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -314,7 +324,7 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 
 ## 8. Acceptance criteria (for Builder / QA)
 
-The **documentation** backlog (phase 2) is complete when §1.1 holds (both mapped backlog items). The **implementation** backlog (phase 3 onward) is complete when all of the following are true:
+The **documentation** backlog (phase 2) is complete when §1.1 holds for every backlog row that maps here. The **implementation** backlog (phase 3 onward) is complete when all of the following are true:
 
 1. **Public API listed** — README links to this document and shows a minimal end-to-end example consistent with §3.3.
 2. **`__all__` matches §3** — Every symbol named in the §3 table appears in package `__all__`.
@@ -323,11 +333,13 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds (both mappe
 5. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§6** (compatibility matrix backlog) is satisfied for tables, justified bounds, and documented CI validation.
 6. **Tests** — Pytest passes without merge artifacts; obligations in **[TESTING_SPEC.md](TESTING_SPEC.md)** **§4–§5** are met (success path, failure path, exporter-error path, fakes/determinism, replayt public surface only). Span attributes, lifecycle events/attributes per §6, success/failure metrics, `__all__` parity, and provider installation remain covered as today’s `tests/test_tracing.py` / `tests/test_pyproject_dependencies.py` demonstrate—extend or split modules when scenarios grow.
 7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
+8. **CI readability** — [CI_SPEC.md](CI_SPEC.md) **§5** is satisfied: Ruff lint, Ruff format check, and pytest run in separately identifiable steps; failures surface the failing tool; exit codes are not masked; logs follow **§3.3–§3.4**; README satisfies **§3.5**.
 
 ## 9. Related documents
 
 - [MISSION.md](MISSION.md) — Scope and audiences.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — Narrow APIs and consumer-side maintenance.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest strategy, replayt boundary tests, exporter error coverage, CI parity.
+- [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest CI steps, failure surfacing, safe logs.
 - [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) — `RunSummary` / `generate_run_summary`.
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
