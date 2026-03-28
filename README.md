@@ -118,6 +118,8 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 | `replayt.workflow.run.duration_ms` | `outcome`, `workflow_id`; optional `run_id` |
 | `replayt.exporter.errors_total` | `error_type`; optional `workflow_id`, `run_id` |
 
+`error_type` SHOULD be one of `export_failed`, `serialization_error`, `timeout`, or `unknown` (see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5.3). Other strings are recorded as `unknown`.
+
 - Prefer stable **workflow** and **run** identifiers that are safe to emit.
 - Keep labels **low-cardinality**; do not put unbounded or secret-bearing values on metrics. See [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md).
 
