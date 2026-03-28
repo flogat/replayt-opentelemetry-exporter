@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Phase **2** spec (*Add compatibility matrix and dependency pins for replayt and OpenTelemetry*): [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) defines the normative **compatibility table** shape, **`pyproject.toml` justification** rules for replayt and OpenTelemetry, **CI matrix** obligations (vs current single-job resolver), and Spec vs Builder acceptance criteria; [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §1.1 maps the backlog here, §7 cross-links, §8 extends Builder checklist; README **Version compatibility** includes a snapshot table and points to the spec; [docs/DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) references the matrix spec under **Explicit contracts**.
+
 ### Changed
 - `workflow_run_span` emits [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6** lifecycle span events (`replayt.workflow.run.started`, `replayt.workflow.run.completed`) and sets completion attributes (`replayt.workflow.outcome`; on failure also `replayt.workflow.error.type` and `replayt.workflow.failure.category` with a documented exception-to-category map in `tracing.py`).
 - `record_exporter_error` maps `error_type` to the recommended set in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.3** (`export_failed`, `serialization_error`, `timeout`, `unknown`). Any other value is recorded as `unknown` so metric cardinality stays bounded; a debug log line notes the original value.

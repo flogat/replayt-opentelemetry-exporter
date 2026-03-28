@@ -27,13 +27,17 @@ These symbols are the intended stable exports (see the spec for parameters and s
 
 ## Version compatibility
 
-Declared dependency ranges live in **`pyproject.toml`**. At a high level:
+**Normative policy** (matrix shape, justified pins, how CI should validate): **[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md)**. That spec maps the backlog *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* to testable Builder obligations.
 
-- **Python:** `>=3.11` (`requires-python`).
-- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` `>=1.20.0`.
-- **replayt:** `>=0.1.0` (upper bound **TODO** until a breaking replayt release is validated here).
+Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 
-CI installs the latest **replayt** matching `>=0.1.0` from PyPI (see the workflow log line `replayt <version>`). Mission Control baseline logs used **0.4.25** as the public API snapshot for examples until you pin otherwise—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.
+| Component | Supported range (see `pyproject.toml`) | CI / validation (today) |
+| --------- | -------------------------------------- | ------------------------ |
+| Python | `>=3.11` (`requires-python`) | Python **3.12** in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) `test` job |
+| OpenTelemetry API / SDK | `>=1.20.0` each | Resolver-chosen versions in that job; see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4** for the planned multi-version matrix |
+| replayt | `>=0.1.0` (upper bound **TODO** until validated—see spec **§3**) | **Print replayt version** step logs the resolved wheel; baseline reference **0.4.25** (Mission Control phase 1c)—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7 |
+
+Until the CI **matrix** described in [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) ships, “supported” for replayt and OTel means **declared ranges** plus **whatever versions the default CI job resolves**; expand coverage by following that spec.
 
 ## Design principles
 
@@ -144,6 +148,7 @@ team's tooling.
 | `docs/MISSION.md` | Mission and scope |
 | `docs/DESIGN_PRINCIPLES.md` | Design and integration principles |
 | `docs/PUBLIC_API_SPEC.md` | Public API, replayt seam, run boundaries, metric names, versions |
+| `docs/COMPATIBILITY_MATRIX_SPEC.md` | Compatibility matrix, dependency pin justification, CI validation policy |
 | `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present) |
 | `src/replayt_opentelemetry_exporter/` | Python package (import `replayt_opentelemetry_exporter`) |
 | `tests/` | Pytest suite |
