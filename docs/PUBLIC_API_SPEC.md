@@ -17,6 +17,16 @@ The backlog item *Define public exporter API and replayt integration seam* is sa
 | Run-boundary behavior (start/end, error path) | **§4** (span lifecycle, ordered steps, re-raise rule) |
 | Version expectations (or explicit TODO where unavoidable) | **§7** and README **Version compatibility**; TODOs only for unknown upper bounds |
 
+The backlog item *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| README or docs table lists supported replayt and OTel versions | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§2**; README **Version compatibility** (table or link) |
+| `pyproject.toml` declares runtime dependencies with justified bounds | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3**; **§7.1** here (normative ranges) |
+| Changelog or docs note how matrix updates are validated | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4**; [CHANGELOG.md](../CHANGELOG.md) when behavior ships |
+
+Full automation (CI matrix) is specified in **COMPATIBILITY_MATRIX_SPEC.md §4**; implementing it is **Builder** work, not Spec-only.
+
 The backlog item *Emit traces for replayt workflow run lifecycle with human-readable status* is satisfied for documentation when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -262,17 +272,19 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 ## 7. Version and compatibility expectations
 
+**Compatibility matrix, pin justification, and CI validation policy** are specified in **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**. This section stays the short normative snapshot for integrators; avoid duplicating matrix maintenance rules here.
+
 ### 7.1 Declared in `pyproject.toml` (normative ranges)
 
 - **Python:** `requires-python` as specified in `[project]` (currently `>=3.11`).
-- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` lower bounds as in `[project.dependencies]` (currently `>=1.20.0`). Integrators MAY use newer API/SDK minors on the same major line; this package SHOULD stay compatible with supported OTel majors per release notes.
-- **replayt:** Lower bound as in `[project.dependencies]` (currently `>=0.1.0`). Upper bounds or caps MAY be added for known breakages.
+- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` as in `[project.dependencies]` (currently `>=1.20.0,<2`). Integrators MAY use newer 1.x minors within that range; a 2.x line requires a documented matrix and CHANGELOG entry before bounds widen.
+- **replayt:** Lower bound as in `[project.dependencies]` (currently `>=0.4.0`). Upper bounds or caps MAY be added for known breakages.
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
 
-- CI prints the resolved **replayt** version after `pip install` (see the `test` job step **Print replayt version**). That line is the **tested** version for that workflow run.
-- **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until you add an upper pin or lockfile.
-- When this repository claims support for a specific replayt line in README, update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
+- CI job **`.github/workflows/ci.yml`** **`test`** runs a **four-cell matrix** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell.
+- **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until README and the compatibility matrix claim a different line.
+- When this repository claims support for a specific replayt line in README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md), update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
 ### 7.3 Compatibility snapshot (copy for releases)
 
@@ -281,14 +293,14 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
 | Python | `requires-python` (currently `>=3.11`) | CI matrices may test a subset. |
-| OpenTelemetry API/SDK | `>=1.20.0` | Same major line expected; document any new major in CHANGELOG. |
-| replayt | `>=0.1.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
-| Tested replayt (CI) | Printed in CI after install | Latest satisfying `>=0.1.0` unless you add a pin or lockfile. |
+| OpenTelemetry API/SDK | `>=1.20.0,<2` | Stay on 1.x until bounds and matrix explicitly cover 2.x. |
+| replayt | `>=0.4.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
+| Tested replayt (CI) | Matrix cells **0.4.0** and **latest** | See [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. |
 | Reference replayt (examples) | **0.4.25** (baseline log) | Update when README claims a different line. |
 
 ### 7.4 TODO allowed
 
-- Exact **upper** bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md) or here until validated.
+- Exact **upper** bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md), here, or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) until validated—provided **§3** of that document still records rationale for existing lower bounds.
 
 ## 8. Acceptance criteria (for Builder / QA)
 
@@ -298,7 +310,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds (both mappe
 2. **`__all__` matches §3** — Every symbol named in the §3 table appears in package `__all__`.
 3. **Run boundaries** — Behavior matches §4 (success path, error path with re-raise, span ended, metrics recorded per §4.1.1).
 4. **Lifecycle traces** — `workflow_run_span` emits the **§6** lifecycle events (`replayt.workflow.run.started`, `replayt.workflow.run.completed`) and sets **§6** completion span attributes on success and failure paths; failure path keeps OTel ERROR status with a **safe** description (exception type only) and sets **`replayt.workflow.failure.category`** per **§6.4** (`unknown` when no mapping applies).
-5. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3.
+5. **Versions** — README and §7 state dependency ranges from `pyproject.toml` and the tested/reference replayt line per §7.2–7.3; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§6** (compatibility matrix backlog) is satisfied for tables, justified bounds, and documented CI validation.
 6. **Tests** — Pytest passes without merge artifacts; tests cover span attributes, lifecycle events/attributes per §6, success/failure metrics, and provider installation at least at the level of `tests/test_tracing.py` intent.
 7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 

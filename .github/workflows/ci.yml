@@ -18,6 +18,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - replayt: "0.4.0"
+            otel: "1.20.0"
+          - replayt: "0.4.0"
+            otel: "1.40.0"
+          - replayt: "latest"
+            otel: "1.20.0"
+          - replayt: "latest"
+            otel: "1.40.0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,9 +38,27 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - name: Install package and dev deps
-        run: pip install -e ".[dev]"
-      - name: Print replayt version (CI-tested resolver)
-        run: python -c "import importlib.metadata as m; print('replayt', m.version('replayt'))"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Apply matrix pins (replayt + OpenTelemetry API/SDK)
+        run: |
+          pip install --force-reinstall \
+            "opentelemetry-api==${{ matrix.otel }}" \
+            "opentelemetry-sdk==${{ matrix.otel }}"
+          if [ "${{ matrix.replayt }}" = "latest" ]; then
+            pip install --upgrade --force-reinstall replayt
+          else
+            pip install --force-reinstall "replayt==${{ matrix.replayt }}"
+          fi
+      - name: Print resolved dependency versions (matrix audit)
+        run: |
+          python - <<'PY'
+          import importlib.metadata as m
+
+          for dist in ("replayt", "opentelemetry-api", "opentelemetry-sdk"):
+              print(dist, m.version(dist))
+          PY
       - name: Ruff check
         run: ruff check src tests
       - name: Ruff format

@@ -2,7 +2,7 @@
 
 Hey, revise as the project matures. Defaults below are minimal—expand with rules for **your** codebase.
 
-1. **Explicit contracts** — Document supported replayt (and third-party framework) versions; test integration boundaries. The concrete public surface and version notes for this package live in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md).
+1. **Explicit contracts** — Document supported replayt (and third-party framework) versions; test integration boundaries. The concrete public surface and version notes for this package live in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md). The **compatibility matrix**, **pin justification rules**, and **CI validation expectations** for replayt and OpenTelemetry live in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) (keep them aligned when bounds change).
 2. **Small public surfaces** — Prefer narrow APIs and documented extension points.
 3. **Observable automation** — Local scripts and CI produce clear logs and exit codes.
 4. **Consumer-side maintenance** — Compatibility shims and pins live **here**; upstream changes are tracked with tests

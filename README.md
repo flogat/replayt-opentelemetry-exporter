@@ -27,13 +27,18 @@ These symbols are the intended stable exports (see the spec for parameters and s
 
 ## Version compatibility
 
-Declared dependency ranges live in **`pyproject.toml`**. At a high level:
+**Normative policy** (matrix shape, justified pins, how CI should validate): **[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md)**. That spec maps the backlog *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* to testable Builder obligations.
 
-- **Python:** `>=3.11` (`requires-python`).
-- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` `>=1.20.0`.
-- **replayt:** `>=0.1.0` (upper bound **TODO** until a breaking replayt release is validated here).
+Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 
-CI installs the latest **replayt** matching `>=0.1.0` from PyPI (see the workflow log line `replayt <version>`). Mission Control baseline logs used **0.4.25** as the public API snapshot for examples until you pin otherwise—see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.
+| Component | Supported range (see `pyproject.toml`) | CI / validation |
+| --------- | -------------------------------------- | ---------------- |
+| Python | `>=3.11` (`requires-python`) | Python **3.12** only in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) job **`test`** (see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4**) |
+| OpenTelemetry API / SDK | `>=1.20.0,<2` each | `test` **strategy.matrix**: pins **1.20.0** and **1.40.0** (each cell reinstalls API + SDK to the same version); **Print resolved dependency versions** logs `replayt`, `opentelemetry-api`, `opentelemetry-sdk` |
+| replayt | `>=0.4.0` (no upper cap yet—see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§3**) | Same matrix: **0.4.0** and PyPI **latest** (`pip install --upgrade --force-reinstall replayt`) |
+| OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http>=1.20.0,<2` | Same OpenTelemetry major as API/SDK; install locally with `pip install -e ".[dev,otlp]"` and match a matrix cell if you need parity |
+
+Matrix updates are validated by that workflow: every push runs **Ruff** and **pytest** once per cell. Approximate a cell locally with `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), then `pytest` from the repo root after `pip install -e ".[dev]"`.
 
 ## Design principles
 
@@ -64,7 +69,7 @@ python -m ruff check .
 python -m ruff format --check .
 ```
 
-CI runs the same checks on Python 3.12 (see `.github/workflows/ci.yml`). Each workflow run logs the resolved **replayt** wheel version after install.
+CI runs the same checks on Python 3.12 (see `.github/workflows/ci.yml` job **`test`**). Each matrix cell reinstalls pinned **replayt** and OpenTelemetry API/SDK versions, then logs all three distributions before Ruff and pytest.
 
 ## Enable tracing and metrics in development
 
@@ -144,6 +149,7 @@ team's tooling.
 | `docs/MISSION.md` | Mission and scope |
 | `docs/DESIGN_PRINCIPLES.md` | Design and integration principles |
 | `docs/PUBLIC_API_SPEC.md` | Public API, replayt seam, run boundaries, metric names, versions |
+| `docs/COMPATIBILITY_MATRIX_SPEC.md` | Compatibility matrix, dependency pin justification, CI validation policy |
 | `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present) |
 | `src/replayt_opentelemetry_exporter/` | Python package (import `replayt_opentelemetry_exporter`) |
 | `tests/` | Pytest suite |
