@@ -48,6 +48,16 @@ _EXACT_BLOCKED_ATTRIBUTE_KEYS = frozenset(
 
 _MAX_ATTRIBUTE_VALUE_LEN = 100
 
+# PUBLIC_API_SPEC §5.3: values outside this set are recorded as "unknown" (cardinality).
+_RECOMMENDED_EXPORT_ERROR_TYPES = frozenset(
+    {
+        "export_failed",
+        "serialization_error",
+        "timeout",
+        "unknown",
+    }
+)
+
 # Global metrics instruments
 _run_counter: Counter | None = None
 _error_counter: Counter | None = None
@@ -228,13 +238,25 @@ def record_run_outcome(
         _duration_histogram.record(duration_ms, hist_attrs)
 
 
+def _normalize_exporter_error_type(error_type: str) -> str:
+    """Map caller-supplied error_type to the recommended §5.3 set (unknown if not listed)."""
+    if error_type in _RECOMMENDED_EXPORT_ERROR_TYPES:
+        return error_type
+    logger.debug(
+        "record_exporter_error: coercing error_type %r to 'unknown' (not in recommended set)",
+        error_type,
+    )
+    return "unknown"
+
+
 def record_exporter_error(
     error_type: str, workflow_id: str | None = None, run_id: str | None = None
 ) -> None:
     """Record exporter error metrics."""
+    normalized = _normalize_exporter_error_type(error_type)
     if _error_counter is not None:
         attributes: dict[str, str] = {
-            "error_type": error_type,
+            "error_type": normalized,
         }
         if workflow_id:
             attributes["workflow_id"] = workflow_id

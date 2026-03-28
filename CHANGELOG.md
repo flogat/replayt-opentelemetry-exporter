@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `record_exporter_error` maps `error_type` to the recommended set in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.3** (`export_failed`, `serialization_error`, `timeout`, `unknown`). Any other value is recorded as `unknown` so metric cardinality stays bounded; a debug log line notes the original value.
 - `workflow_run_span` optional `attributes` are validated for export: blocked keys (credentials-style names per [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md)) are omitted; long string values truncate at 100 characters; `replayt.workflow.id` / `replayt.run.id` cannot be overridden via the `attributes` dict.
 - `build_meter_provider` and `install_meter_provider` accept optional `metric_readers` (for example `InMemoryMetricReader` in unit tests) in addition to `metric_exporters`, consistent with OpenTelemetry Python SDK types.
 
@@ -26,8 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase **3** builder (*Define public exporter API and replayt integration seam*): pytest asserts success-path spans use status OK, error-path spans finish with an end time after re-raise, and `replayt_opentelemetry_exporter.__all__` matches [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §3.
 - Counter metric `replayt.workflow.run.outcomes_total` (labels: `outcome`="success|failure", `workflow_id`) to track completed and failed workflow runs.
 - Histogram metric `replayt.workflow.run.duration_ms` (labels: `outcome`, `workflow_id`) to track run durations.
-- Counter metric `replayt.exporter.errors_total` (labels: `error_type`, `workflow_id`) to track exporter health and dropped events.
-- Metric cardinality kept low: `workflow_id` (<100 distinct values expected per deployment), `outcome` (2 values), `error_type` (limited to enumerated types like "export_failed", "serialization_error", "timeout").
+- Counter metric `replayt.exporter.errors_total` (labels: `error_type`, optional `workflow_id` / `run_id`) to track exporter health and export-path failures.
+- Metric cardinality kept low: `workflow_id` (operator guidance: tens to low hundreds per deployment), `outcome` (2 values), `error_type` (§5.3 recommended set; see **Changed** for normalization).
 
 ## [0.1.0] - 2026-03-25
 

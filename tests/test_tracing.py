@@ -290,6 +290,7 @@ def test_workflow_run_span_records_success_metrics() -> None:
                         for data_point in metric.data.data_points:
                             assert data_point.attributes.get("outcome") == "success"
                             assert data_point.attributes.get("workflow_id") == "wf-123"
+                            assert data_point.attributes.get("run_id") == "run-456"
                             assert data_point.value == 1
         assert found_run_counter, "replayt.workflow.run.outcomes_total metric not found"
     finally:
@@ -322,6 +323,7 @@ def test_workflow_run_span_records_failure_metrics() -> None:
                         for data_point in metric.data.data_points:
                             if data_point.attributes.get("outcome") == "failure":
                                 assert data_point.attributes.get("workflow_id") == "wf-123"
+                                assert data_point.attributes.get("run_id") == "run-456"
                                 assert data_point.value == 1
         assert found_run_counter, "replayt.workflow.run.outcomes_total metric not found"
     finally:
@@ -335,7 +337,7 @@ def test_record_exporter_error() -> None:
     try:
         metrics.set_meter_provider(provider)
 
-        record_exporter_error("test_error", workflow_id="wf-123", run_id="run-456")
+        record_exporter_error("export_failed", workflow_id="wf-123", run_id="run-456")
 
         reader.collect()
         metrics_data = reader.get_metrics_data()
@@ -347,10 +349,61 @@ def test_record_exporter_error() -> None:
                     if metric.name == "replayt.exporter.errors_total":
                         found_error_counter = True
                         for data_point in metric.data.data_points:
-                            assert data_point.attributes.get("error_type") == "test_error"
+                            assert data_point.attributes.get("error_type") == "export_failed"
                             assert data_point.attributes.get("workflow_id") == "wf-123"
+                            assert data_point.attributes.get("run_id") == "run-456"
                             assert data_point.value == 1
         assert found_error_counter, "replayt.exporter.errors_total metric not found"
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+@pytest.mark.parametrize(
+    "error_type",
+    ("export_failed", "serialization_error", "timeout", "unknown"),
+)
+def test_record_exporter_error_recommended_types_passthrough(error_type: str) -> None:
+    reader = InMemoryMetricReader()
+    provider = build_meter_provider(metric_readers=[reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(provider)
+        record_exporter_error(error_type)
+        reader.collect()
+        metrics_data = reader.get_metrics_data()
+        found = False
+        for rm in metrics_data.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.exporter.errors_total":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("error_type") == error_type:
+                                found = True
+                                assert dp.value == 1
+        assert found, f"expected error_type={error_type!r} data point"
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_record_exporter_error_coerces_non_recommended_to_unknown() -> None:
+    reader = InMemoryMetricReader()
+    provider = build_meter_provider(metric_readers=[reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(provider)
+        record_exporter_error("custom_vendor_code_500")
+        reader.collect()
+        metrics_data = reader.get_metrics_data()
+        found = False
+        for rm in metrics_data.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.exporter.errors_total":
+                        for dp in metric.data.data_points:
+                            assert dp.attributes.get("error_type") == "unknown"
+                            assert dp.value == 1
+                            found = True
+        assert found
     finally:
         metrics.set_meter_provider(previous_meter)
 
@@ -378,6 +431,8 @@ def test_duration_histogram_records_values() -> None:
                         found_duration_histogram = True
                         for data_point in metric.data.data_points:
                             assert data_point.attributes.get("workflow_id") == "wf-123"
+                            assert data_point.attributes.get("outcome") == "success"
+                            assert data_point.attributes.get("run_id") == "run-456"
                             assert data_point.count > 0
         assert found_duration_histogram, "replayt.workflow.run.duration_ms metric not found"
     finally:
