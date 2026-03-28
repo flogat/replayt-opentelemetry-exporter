@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build_meter_provider` and `install_meter_provider` accept optional `metric_readers` (for example `InMemoryMetricReader` in unit tests) in addition to `metric_exporters`, consistent with OpenTelemetry Python SDK types.
 
 ### Added
+- Phase **3** builder (*Implement automated tests for replayt boundary and exporter behavior*): contract-style tests in **`tests/test_tracing.py`** run **`replayt.run_with_mock`** inside **`workflow_run_span`** using an in-memory **`EventStore`**-shaped store (no `replayt.persistence` imports), covering a successful terminal workflow and a failed run re-raised as **`RunFailed`** (failure category **runtime**). See [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§4.2**.
 - Pytest module **`tests/test_pyproject_dependencies.py`** checks that installed wheels satisfy **`pyproject.toml`** runtime requirements and that OpenTelemetry specifiers stay below **2.0**.
 - Phase **3** builder (*Define public exporter API and replayt integration seam*): pytest asserts success-path spans use status OK, error-path spans finish with an end time after re-raise, and `replayt_opentelemetry_exporter.__all__` matches [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §3.
 - Counter metric `replayt.workflow.run.outcomes_total` (labels: `outcome`="success|failure", `workflow_id`) to track completed and failed workflow runs.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
+from uuid import uuid4
 
 import pytest
 from opentelemetry import metrics, trace
@@ -11,7 +13,14 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 from opentelemetry.trace import StatusCode, Tracer
-from replayt import ContextSchemaError, RunFailed
+from replayt import (
+    ContextSchemaError,
+    MockLLMClient,
+    RunContext,
+    RunFailed,
+    Workflow,
+    run_with_mock,
+)
 
 import replayt_opentelemetry_exporter
 import replayt_opentelemetry_exporter.tracing as tracing_mod
@@ -107,6 +116,102 @@ def _workflow_tracer_from_memory_exporter() -> tuple[Tracer, InMemorySpanExporte
 
 def _events_named(span, name: str) -> list:
     return [e for e in span.events if e.name == name]
+
+
+class _MemoryEventStore:
+    """In-process store matching replayt's EventStore protocol (no replayt.persistence imports)."""
+
+    def __init__(self) -> None:
+        self._by_run: dict[str, list[dict[str, Any]]] = {}
+        self._seq: dict[str, int] = {}
+
+    def append_event(
+        self, run_id: str, *, ts: str, typ: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        seq = self._seq.get(run_id, 0) + 1
+        self._seq[run_id] = seq
+        event: dict[str, Any] = {
+            "ts": ts,
+            "run_id": run_id,
+            "seq": seq,
+            "type": typ,
+            "payload": payload,
+        }
+        self._by_run.setdefault(run_id, []).append(event)
+        return event
+
+    def append(self, run_id: str, event: dict[str, Any]) -> None:
+        self._by_run.setdefault(run_id, []).append(event)
+
+    def load_events(self, run_id: str) -> list[dict[str, Any]]:
+        return list(self._by_run.get(run_id, []))
+
+    def list_run_ids(self) -> list[str]:
+        return sorted(self._by_run.keys())
+
+    def delete_run(self, run_id: str) -> int:
+        removed = len(self._by_run.get(run_id, []))
+        self._by_run.pop(run_id, None)
+        self._seq.pop(run_id, None)
+        return removed
+
+
+def _workflow_run_then_raise_if_failed(
+    wf: Workflow, store: _MemoryEventStore, mock: MockLLMClient, *, run_id: str
+) -> None:
+    """Re-raise a failed RunResult as RunFailed (typical integrator pattern for tracing)."""
+    res = run_with_mock(wf, store, mock, run_id=run_id)
+    if res.status != "completed":
+        raise RunFailed(res.error or "run failed")
+
+
+def test_run_with_mock_contract_success_path_records_adapter_success() -> None:
+    """TESTING_SPEC 4.2: run_with_mock success path inside workflow_run_span."""
+    wf = Workflow("otel-contract-success")
+
+    @wf.step("only")
+    def only_step(_ctx: RunContext) -> None:
+        return None
+
+    wf.set_initial("only")
+    store = _MemoryEventStore()
+    mock = MockLLMClient()
+    run_id = f"contract-ok-{uuid4().hex[:12]}"
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(tracer, wf.name, run_id=run_id):
+        run_with_mock(wf, store, mock, run_id=run_id)
+    provider.force_flush()
+    span = exporter.get_finished_spans()[0]
+    assert span.attributes.get("replayt.workflow.outcome") == "success"
+    assert (
+        _events_named(span, "replayt.workflow.run.completed")[0].attributes.get(
+            "replayt.workflow.outcome"
+        )
+        == "success"
+    )
+
+
+def test_run_with_mock_contract_failed_run_surfaces_as_runtime_when_re_raises_run_failed() -> None:
+    """TESTING_SPEC 4.2: RunFailed after failed mock run gets failure.category runtime."""
+    wf = Workflow("otel-contract-fail")
+
+    @wf.step("only")
+    def only_step(_ctx: RunContext) -> None:
+        raise ValueError("intentional step failure")
+
+    wf.set_initial("only")
+    store = _MemoryEventStore()
+    mock = MockLLMClient()
+    run_id = f"contract-fail-{uuid4().hex[:12]}"
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with pytest.raises(RunFailed):
+        with workflow_run_span(tracer, wf.name, run_id=run_id):
+            _workflow_run_then_raise_if_failed(wf, store, mock, run_id=run_id)
+    provider.force_flush()
+    span = exporter.get_finished_spans()[0]
+    assert span.attributes.get("replayt.workflow.outcome") == "failure"
+    assert span.attributes.get("replayt.workflow.failure.category") == "runtime"
+    assert span.attributes.get("replayt.workflow.error.type") == "RunFailed"
 
 
 def test_workflow_run_span_lifecycle_events_and_attributes_success() -> None:
