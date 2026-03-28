@@ -17,7 +17,7 @@ The backlog item *Implement automated tests for replayt boundary and exporter be
 | Backlog acceptance criterion | Normative requirement in this spec |
 | ---------------------------- | ----------------------------------- |
 | Tests run via documented command (e.g. pytest) | **§3.1** — primary command is `pytest` from the repository root after `pip install -e ".[dev]"`. |
-| At least one test exercises **success** and one exercises **failure** or **export error** path | **§4.1** — success path for run lifecycle; **§4.2** — failure path inside `workflow_run_span`; **§4.3** — exporter / export-health path via `replayt.exporter.errors_total` (or equivalent span/export failure signal once implemented). |
+| At least one test exercises **success** and one exercises **failure** or **export error** path | **§4.3** — success path for run lifecycle; **§4.4** — failure path inside `workflow_run_span`; **§4.5** — exporter / export-health path via `replayt.exporter.errors_total` (or equivalent span/export failure signal once implemented). |
 | CI or local script documents how to run the suite with clear exit codes | **§3.2** — README and **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) §4** reference `.github/workflows/ci.yml`; pytest exit codes are standard (no custom wrapper required unless the project adds one later). |
 
 ## 3. How to run tests (normative)
