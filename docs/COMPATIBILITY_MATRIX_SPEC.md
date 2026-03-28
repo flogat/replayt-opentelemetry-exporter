@@ -73,7 +73,7 @@ If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-prot
 
 ### 4.1 Implemented matrix (current)
 
-**[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline.
+**[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline. **How** those checks are split into steps, named, and logged is specified in **[CI_SPEC.md](CI_SPEC.md)**.
 
 ### 4.2 Target state (Builder obligation) — satisfied
 
@@ -110,5 +110,6 @@ Maintainers MAY append dated rows when changing bounds:
 
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, and what the suite must prove at the replayt boundary.
+- [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — explicit contracts and consumer-side maintenance.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing dependency and validation notes.

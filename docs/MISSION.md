@@ -54,22 +54,23 @@ Concrete outcomes we optimize for:
 
 1. **CI green** — Every pull request keeps the pipeline **green**: **Ruff** (lint + format check) and **pytest** for
    behavior we claim. Tests cover unit logic and, where valuable, contract-style checks against replayt’s public
-   surface (see `.github/workflows/ci.yml` for the exact commands).
+   surface (see `.github/workflows/ci.yml` for the exact commands). **Readable automation** (which step failed, standard exit codes, no secret dumps in logs) is specified in **[CI_SPEC.md](CI_SPEC.md)**.
 2. **How to run tests locally** — After a dev install (`pip install -e ".[dev]"` from the repository root), run:
 
    ```bash
    pytest
    ```
 
-   Match CI with `ruff check .` and `ruff format --check .` from the repo root (or `python -m ruff …` if you prefer
-   invoking Ruff as a module).
+   Match CI with `ruff check src tests` and `ruff format --check src tests` from the repo root (or `python -m ruff …` if you prefer
+   invoking Ruff as a module). See [CI_SPEC.md](CI_SPEC.md) **§3.1** if paths change.
 3. **Documented runbook** — The README describes how to enable the exporter and verify spans (and, when shipped,
    metrics) in a dev environment—operators and integrators should not need to read source to get a first successful
    export.
 4. **Aligned docs** — Mission, **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)**,
    **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)**,
    **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)**,
-   **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**, and
+   **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**,
+   **[CI_SPEC.md](CI_SPEC.md)**, and
    **[TESTING_SPEC.md](TESTING_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, the
    documented public surface, version/matrix policy, and **what tests must prove** (this package stays compatible by pins, tests, and notes **here**; it does not steer
    replayt core—see **Not a lever on core** in the design principles).
