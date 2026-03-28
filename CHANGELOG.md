@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Metric instruments now use the canonical names from the public spec: `replayt.workflow.run.outcomes_total`, `replayt.workflow.run.duration_ms`, and `replayt.exporter.errors_total`.
 
 ### Added
+- Phase **3** builder (*Define public exporter API and replayt integration seam*): pytest asserts success-path spans use status OK, error-path spans finish with an end time after re-raise, and `replayt_opentelemetry_exporter.__all__` matches [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §3.
 - Counter metric `replayt.workflow.run.outcomes_total` (labels: `outcome`="success|failure", `workflow_id`) to track completed and failed workflow runs.
 - Histogram metric `replayt.workflow.run.duration_ms` (labels: `outcome`, `workflow_id`) to track run durations.
 - Counter metric `replayt.exporter.errors_total` (labels: `error_type`, `workflow_id`) to track exporter health and dropped events.

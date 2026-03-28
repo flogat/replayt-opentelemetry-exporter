@@ -12,6 +12,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 from opentelemetry.trace import StatusCode, Tracer
 
+import replayt_opentelemetry_exporter
 import replayt_opentelemetry_exporter.tracing as tracing_mod
 from replayt_opentelemetry_exporter.tracing import (
     RunSummary,
@@ -103,6 +104,27 @@ def _workflow_tracer_from_memory_exporter() -> tuple[Tracer, InMemorySpanExporte
     return tracer, exporter, provider
 
 
+def test_package_all_exports_match_public_api_spec_section3() -> None:
+    """Lock top-level exports to docs/PUBLIC_API_SPEC.md §3."""
+    expected = frozenset(
+        {
+            "__version__",
+            "build_resource",
+            "build_tracer_provider",
+            "build_meter_provider",
+            "install_tracer_provider",
+            "install_meter_provider",
+            "get_workflow_tracer",
+            "workflow_run_span",
+            "RunSummary",
+            "generate_run_summary",
+            "record_run_outcome",
+            "record_exporter_error",
+        }
+    )
+    assert frozenset(replayt_opentelemetry_exporter.__all__) == expected
+
+
 def test_workflow_run_span_sets_attributes() -> None:
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(tracer, "wf-123", run_id="run-456"):
@@ -113,6 +135,7 @@ def test_workflow_run_span_sets_attributes() -> None:
     assert spans[0].name == "replayt.workflow.run"
     assert spans[0].attributes["replayt.workflow.id"] == "wf-123"
     assert spans[0].attributes["replayt.run.id"] == "run-456"
+    assert spans[0].status.status_code == StatusCode.OK
 
 
 def test_workflow_run_span_omits_run_id_when_none() -> None:
@@ -144,6 +167,7 @@ def test_workflow_run_span_reraises_same_exception() -> None:
     spans = exporter.get_finished_spans()
     assert len(spans) == 1
     assert spans[0].status.status_code == StatusCode.ERROR
+    assert spans[0].end_time is not None
 
 
 def test_workflow_run_span_error_status_description_omits_message_body() -> None:
