@@ -150,7 +150,32 @@ Published instruments MUST use the names below unless a semver-major release cha
 | Histogram | `replayt.workflow.run.duration_ms` | Run duration in milliseconds. |
 | Counter | `replayt.exporter.errors_total` | Export or serialization failures and similar (e.g. `error_type` attribute). |
 
-Exact attribute keys for each instrument are listed in the [README](../README.md) **Metrics** section. This table is the normative instrument list; [CHANGELOG.md](../CHANGELOG.md) **Unreleased** records notable naming or semantics changes between releases.
+### 5.1 Normative instrument list
+
+The table above is the canonical instrument set. [CHANGELOG.md](../CHANGELOG.md) **Unreleased** records notable naming or semantics changes between releases.
+
+### 5.2 Attribute keys
+
+A short summary of label keys lives in the [README](../README.md) **Metrics** section. Cardinality expectations are in §5.4.
+
+### 5.3 `error_type` (`replayt.exporter.errors_total`)
+
+Use one of: `export_failed`, `serialization_error`, `timeout`, `unknown`. The implementation records only these values on the metric: any other string is stored as `unknown`, and the caller-supplied string is logged at debug level. That keeps time series bounded while older call sites that passed ad hoc strings keep working.
+
+### 5.4 Cardinality
+
+- `workflow_id`: keep to a stable, small set per deployment (operator guidance: tens to low hundreds of distinct values).
+- `outcome`: two values (`success`, `failure`).
+- `run_id`: optional; do not use unbounded unique values as a routine label.
+- `error_type`: four values after normalization (§5.3).
+
+### 5.5 Advanced recording APIs
+
+`record_run_outcome` and `record_exporter_error` support integrators who do not wrap the full run in `workflow_run_span`. They require a meter provider whose instruments were created through this package’s `build_meter_provider` / `install_meter_provider` (or test doubles that register the same instrument names).
+
+### 5.6 Exemplars
+
+Histogram exemplars are optional. Turn them on only when organizational policy allows and labels follow [SECURITY_REDACTION.md](SECURITY_REDACTION.md).
 
 ## 6. Trace semantics (span naming)
 
