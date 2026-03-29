@@ -115,6 +115,16 @@ The backlog item *Release engineering: PyPI publish and version sync* is satisfi
 
 Implementing **`pyproject.toml` / `__init__.py` changes**, **`python -m build`**, **twine**, **publish workflow YAML**, and **drift tests** is **Builder** work; this §1.1 row and [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** are the contracts.
 
+The backlog item *Semantic conventions review for span and metric names* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Canonical span names, span events, span attribute keys, metric instrument names, meter scope, and resource attributes from `build_resource` are inventoried and compared to OpenTelemetry semantic conventions where a relevant stable or widely used convention exists | **§5.7**, **§6.8** |
+| Intentional deviations (vendor namespace, lifecycle shape, stability vs upstream churn) and rules for semver when names change are documented | **§5.7**, **§6.8** |
+| Design principles point integrators at the normative naming contract | [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) **Explicit contracts** |
+
+Keeping the inventory accurate in source and docs, and renaming instruments or lifecycle identifiers without updating **§5–§6**, **§5.7**, **§6.8**, and consumer-facing docs, is **Builder** debt; **§8** item **15** is the implementation checklist.
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -302,6 +312,19 @@ Use one of: `export_failed`, `serialization_error`, `timeout`, `unknown`. The im
 
 Histogram exemplars are optional. Turn them on only when organizational policy allows and labels follow [SECURITY_REDACTION.md](SECURITY_REDACTION.md).
 
+### 5.7 OpenTelemetry semantic conventions alignment (metrics and resource)
+
+**Informative baseline:** OpenTelemetry publishes [semantic conventions](https://opentelemetry.io/docs/specs/semconv/) for resources, traces, metrics, and domain areas (including experimental Gen AI signals). This section states how **metrics** and **resource** attributes from this package relate to those conventions.
+
+| Area | This package | Convention alignment |
+| ---- | ------------ | -------------------- |
+| **Resource** | `build_resource` sets `service.name` and `service.version` | **Aligned** with the OpenTelemetry **service** resource namespace. Extra keys from `extra_attributes` are integrator-defined and MUST follow [SECURITY_REDACTION.md](SECURITY_REDACTION.md). |
+| **Metric instrument names** | `replayt.workflow.run.outcomes_total`, `replayt.workflow.run.duration_ms`, `replayt.exporter.errors_total` | **Application-specific** names—not copied from the OpenTelemetry well-known metric catalog (HTTP, RPC, etc.). The `replayt.*` prefix and dotted logical names reserve a **stable integrator-facing** namespace and avoid collisions with platform metrics. |
+| **Instrument units** | Counters use `1`; the duration histogram uses `ms` | **Consistent** with common OpenTelemetry usage for dimensionless counts and milliseconds. |
+| **Meter instrumentation scope** | Implementation uses `get_meter("replayt.workflow")` | Identifies metrics as originating from this workflow adapter; treat the scope string like **§3.1** tracer scope—renaming it is disruptive for backends that group by scope. |
+
+**Intentional deviation:** This package does **not** claim that `replayt.*` metric names map 1:1 to a current OpenTelemetry **stable** semantic convention for “workflow runs” or “LLM applications,” because upstream definitions still evolve and may not match replayt’s lifecycle. If maintainers adopt OTel-standard names later, that is an explicit, **migrated** change (semver and CHANGELOG per **§6.8**).
+
 ## 6. Workflow run trace lifecycle and human-readable status
 
 This section is the **specification** for backlog item *Emit traces for replayt workflow run lifecycle with human-readable status*. It normatively extends **§4** so operators and backends see **run start**, **milestones** (where recorded), and **completion** (success or failure) with **stable, low-cardinality** signals suitable for dashboards—without putting sensitive text in default span or event attributes.
@@ -377,6 +400,21 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 - Required span attributes (existing §4): `replayt.workflow.id`; optional `replayt.run.id` when the integrator supplies a run identifier.
 - Completion attributes **`replayt.workflow.outcome`** (and failure-only keys above) are **in addition** to §4’s required keys.
 
+### 6.8 OpenTelemetry semantic conventions alignment (traces and lifecycle signals)
+
+**Scope:** Root **workflow run** span, lifecycle **span events**, and **span attributes** defined in **§4** and **§6** (excluding integrator-supplied `attributes` except where noted).
+
+| Signal class | Canonical names (defaults) | Convention alignment |
+| ------------ | ------------------------- | -------------------- |
+| **Default span name** | `replayt.workflow.run` | **Application-specific.** Not aligned to OpenTelemetry Gen AI or RPC span naming: the run unit is defined by this adapter and the integrator’s boundary (**§2**, **§4**). Changing the default string is **semver-major** unless the previous default remains available as an alias (documented in [CHANGELOG.md](../CHANGELOG.md)). |
+| **Span attributes** | `replayt.workflow.id`, `replayt.run.id`, `replayt.workflow.outcome`, `replayt.workflow.error.type`, `replayt.workflow.failure.category` | **Vendor-namespaced** keys under `replayt.*`. **Intentional deviation** from relying only on generic OTel attribute names for run identity and outcome: avoids collisions and reduces surprise when generic conventions change. |
+| **Lifecycle span events** | `replayt.workflow.run.started`, `replayt.workflow.run.completed`, optional `replayt.workflow.milestone` (with `replayt.workflow.milestone.name` when used) | **Custom events.** Experimental OpenTelemetry Gen AI and other domain conventions target different span kinds (e.g. model/tool calls); they do **not** subsume these **run-level** lifecycle events. |
+| **Tracer instrumentation scope** | Implementation resolves the tracer via `get_tracer(__name__)` → `replayt_opentelemetry_exporter.tracing` | Same **stability expectations** as **§3.1**. |
+
+**Exception telemetry:** Calling `record_exception` on the span uses the standard OpenTelemetry span API; SDKs may attach stack traces to the exception event. Lifecycle **span attributes** and **event attributes** in **§6** remain subject to **§6.5** (no raw exception message in those fields). That split is **intentional**: operators get safe faceting on attributes while retaining SDK-level exception detail where backends show it.
+
+**When upstream conventions evolve:** Names in **§5–§6**, **§5.7**, and this section are part of the **integrator contract**. Aligning with a future OpenTelemetry stable convention is **not automatic**—maintainers decide in a dedicated change with migration notes so dashboards and alerts do not break silently.
+
 ## 7. Version and compatibility expectations
 
 **Compatibility matrix, pin justification, and CI validation policy** are specified in **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**. This section stays the short normative snapshot for integrators; avoid duplicating matrix maintenance rules here.
@@ -436,6 +474,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: **§7.2** either full spike (**steps 1–3**) when **2.x** is on PyPI **or** step **0** PyPI audit recorded when **2.x** is absent; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, this document **§7.4** and README accurate); if **support**: CI matrix meets that document **§7.4** and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** pins align with API/SDK.
 13. **Release engineering** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** is satisfied: one **§6.1** version strategy, README **Releases** entry, **tag-gated** publish workflow with **trusted publishing**, documented **`build` + `twine check`**, **CHANGELOG** alignment (**§6.3**), and a **§6.4** drift guardrail (or documented waiver).
 14. **Supplemental Python 3.11 CI** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** and [CI_SPEC.md](CI_SPEC.md) **§3.6** are satisfied: job **`test-python-3-11`** uses **§3.1**-equivalent Ruff and pytest steps after the documented pin set; **`schedule`** and **`workflow_dispatch`** are present (or any **push** / **pull_request** behavior is documented in README and **§4.3**); **§7.2** here and README **Version compatibility** stay aligned.
+15. **Semantic conventions inventory** — **§5.7** and **§6.8** stay accurate for shipped metrics, resource attributes, span names, lifecycle events, and span attribute keys; any rename or new canonical identifier updates **§5–§6**, **§5.7**, **§6.8**, [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) when PromQL examples are affected, README **Metrics** / trace verification when user-facing, tests per [TESTING_SPEC.md](TESTING_SPEC.md) **§5**, and [CHANGELOG.md](../CHANGELOG.md) per the stability rules in **§6.8**.
 
 ## 9. Related documents
 
@@ -449,3 +488,4 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).
 - [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (**§8** item **13**).
+- [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/) — informative upstream reference; **§5.7** and **§6.8** document how this package relates to them.
