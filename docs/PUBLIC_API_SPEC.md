@@ -65,6 +65,17 @@ The backlog item *Curate docs/reference-documentation from replayt public API* i
 
 Authoring **`docs/reference-documentation/`** and optional **`scripts/`** tooling is **Builder** work; this §1.1 row is the documentation contract.
 
+The backlog item *Integration example: Runner-based workflow beyond run_with_mock* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Documented minimal example uses **`Runner.run`** (not only `run_with_mock`) inside **`workflow_run_span`**, per **§2.2.1** and **§3.4** | **§2.2.1**, **§3.4** (deliverable path and content rules) |
+| Uses **only** symbols exposed in replayt’s public surface (`__all__` for the matrix pin you target—see **`docs/reference-documentation/`**) | **§3.4**; [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) |
+| States the **narrowest** integrator-owned run boundary for production-style apps | **§2.2.1** |
+| **Runnable** proof: copy-pastable snippet that runs after `pip install -e ".[dev]"` **or** a pytest contract marked per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2** | **§3.4**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2** |
+
+Authoring **`docs/examples/runner_workflow_run_span.md`** (and optional **`examples/`** script), extending **`tests/`**, and README cross-links are **Builder** work; this §1.1 table is the documentation contract.
+
 The backlog item *Document operator dashboards for canonical metrics* is satisfied for **documentation** when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -89,6 +100,16 @@ Replayt’s public API includes types such as `Workflow`, `Runner`, `RunContext`
 - Around `run_with_mock` (or equivalent) when that is the integration’s unit of work.
 
 Exact call sites are **application-specific**. This repository MUST document the pattern (see §4) and MAY add examples that use replayt types **without** implying a private replayt API.
+
+### 2.2.1 Narrowest run boundary for `Runner` (production-style apps)
+
+For integrations that use **`replayt.Runner`** with a real or mock **LLM client** (instead of the `run_with_mock` helper), the **recommended narrowest** block to wrap in **`workflow_run_span`** is the **single** call to **`Runner.run`** (and the same exception-mapping you would apply to a `RunResult` from `run_with_mock`—for example re-raising **`RunFailed`** when the run does not complete—**inside** that block so the span captures success vs failure consistently).
+
+- **Inside the context:** construct the **`Runner`** if you do so immediately before **`run`** *or* reuse a long-lived runner—either way, **`workflow_run_span` MUST enclose `Runner.run(...)`** for the logical run you want one trace/metric series for. Do **not** split one user-visible run across multiple `workflow_run_span` contexts unless you intentionally model sub-runs (see **§4.2**).
+- **Outside the context:** workflow definition setup (`Workflow`, steps, `set_initial`), store construction, and global OTel provider installation remain **outside** unless your application defines “one run” to include them (unusual).
+- **Teardown:** if your integration calls **`Runner.close`**, either include it inside the same span after **`run`** completes (same logical run) or document why a separate boundary is appropriate—default is **same span** when `close` is part of tearing down that runner instance after the run.
+
+This section **does not** introduce a new public API; it narrows **§2.2** for the **`Runner.run`** path so Builders and integrators align on where lifecycle tracing attaches for real applications.
 
 ### 2.3 Out of scope for the seam
 
@@ -144,7 +165,24 @@ with workflow_run_span(tracer, "my-workflow-id", run_id="optional-run-id"):
     ...
 ```
 
+For **`Runner.run`** with the same boundary pattern (in-memory OpenTelemetry and **`MockLLMClient`**), see **§3.4** below.
+
 Optional dependency: OTLP HTTP exporters are not in the core dependency set; integrators install `replayt-opentelemetry-exporter[otlp]` (or an equivalent extra) when using OTLP, per `pyproject.toml`.
+
+### 3.4 Runner-based example (normative deliverable)
+
+The repository **MUST** ship a **minimal**, **integrator-facing** example that mirrors **§3.3** but exercises **`Runner`** and **`Runner.run`** per **§2.2.1** (not only **`run_with_mock`**).
+
+| Requirement | Detail |
+| ----------- | ------ |
+| **Location** | Primary artifact: **`docs/examples/runner_workflow_run_span.md`**. The Builder **MAY** also add a sibling script under **`examples/`** (repository root) if that improves copy-paste ergonomics; if so, README or the markdown file **MUST** document how to run it. |
+| **replayt imports** | Only symbols from replayt’s public API (see **`docs/reference-documentation/`** and the installed package’s **`__all__`**). Typical minimal set: **`Workflow`**, **`RunContext`**, **`Runner`**, **`MockLLMClient`**, **`RunFailed`**, **`RunResult`** as needed—**no** private submodules (e.g. do **not** import **`replayt.persistence`**; use an in-memory **EventStore**-shaped object like the contract tests). |
+| **Adapter imports** | **`build_tracer_provider`**, **`build_meter_provider`**, **`get_workflow_tracer`**, **`workflow_run_span`** (or the same install pattern as **§3.3** with in-memory exporters/readers for a self-contained demo). |
+| **Narrative** | The markdown **MUST** include a short prose callout restating **§2.2.1** (why **`Runner.run`** sits inside **`workflow_run_span`** and what stays outside). |
+| **Runnability** | The example **MUST** be **executable** in one of two ways: **(A)** a fenced Python block (or script) that runs with **`pip install -e ".[dev]"`** and **`python …`** as documented, or **(B)** superseded for execution by a **pytest** contract test that calls **`Runner.run`** inside **`workflow_run_span`**, marked per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**. **At least one** of (A) or (B) is mandatory so CI or contributors can verify the snippet. |
+| **README** | When the artifact lands, README **MUST** link to **`docs/examples/runner_workflow_run_span.md`** from **Quick start** or **Reference documentation** (same release branch as the file). |
+
+The example **SHOULD** use **`MockLLMClient`** so the snippet stays offline and secret-free; integrators substitute their own **`llm_client`** using the same boundary pattern.
 
 ## 4. Run-boundary behavior (`workflow_run_span`)
 
@@ -356,6 +394,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 8. **CI readability** — [CI_SPEC.md](CI_SPEC.md) **§5** is satisfied: Ruff lint, Ruff format check, and pytest run in separately identifiable steps; failures surface the failing tool; exit codes are not masked; logs follow **§3.3–§3.4**; README satisfies **§3.5**.
 9. **Operator monitoring** — [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) is satisfied: **`docs/OPERATOR_RUNBOOK.md`** exists (or README carries equivalent depth per that spec), links from README **Metrics** / **Operator monitoring**, and contains the §4–§7 content obligations (PromQL examples, Grafana panel intent, alert starting points) aligned with §5–§6.
 10. **Replayt reference docs** — [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) is satisfied: **`docs/reference-documentation/README.md`** indexes version-stamped snapshots for **Workflow**, **Runner**, **RunContext**, and **run_with_mock** per matrix replayt pins; README and **REPLAYT_ECOSYSTEM_IDEA.md** link per that spec **§5**.
+11. **Runner-based integration example** — **§3.4** is satisfied: **`docs/examples/runner_workflow_run_span.md`** exists, meets **§2.2.1** / **§3.4** content and public-API rules, has **§3.4** runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**, and README links to the markdown as required there.
 
 ## 9. Related documents
 

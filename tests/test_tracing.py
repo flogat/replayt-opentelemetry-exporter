@@ -18,6 +18,7 @@ from replayt import (
     MockLLMClient,
     RunContext,
     RunFailed,
+    Runner,
     Workflow,
     run_with_mock,
 )
@@ -163,6 +164,38 @@ def _workflow_run_then_raise_if_failed(
     res = run_with_mock(wf, store, mock, run_id=run_id)
     if res.status != "completed":
         raise RunFailed(res.error or "run failed")
+
+
+def test_runner_run_contract_success_path_records_adapter_success() -> None:
+    """TESTING_SPEC §4.2; PUBLIC_API_SPEC §3.4: Runner.run success path inside workflow_run_span."""
+    wf = Workflow("otel-runner-contract-success")
+
+    @wf.step("only")
+    def only_step(_ctx: RunContext) -> None:
+        return None
+
+    wf.set_initial("only")
+    store = _MemoryEventStore()
+    mock = MockLLMClient()
+    run_id = f"runner-contract-ok-{uuid4().hex[:12]}"
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    runner = Runner(wf, store, llm_client=mock)
+    with workflow_run_span(tracer, wf.name, run_id=run_id):
+        try:
+            res = runner.run(run_id=run_id)
+            if res.status != "completed":
+                raise RunFailed(res.error or "run failed")
+        finally:
+            runner.close()
+    provider.force_flush()
+    span = exporter.get_finished_spans()[0]
+    assert span.attributes.get("replayt.workflow.outcome") == "success"
+    assert (
+        _events_named(span, "replayt.workflow.run.completed")[0].attributes.get(
+            "replayt.workflow.outcome"
+        )
+        == "success"
+    )
 
 
 def test_run_with_mock_contract_success_path_records_adapter_success() -> None:

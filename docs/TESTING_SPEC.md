@@ -53,7 +53,7 @@ The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/
 | Layer | Intent | Replayt usage |
 | ----- | ------ | --------------- |
 | **Unit (package-local)** | Provider wiring, metric names, span lifecycle, redaction of attributes, `record_exporter_error` normalization | MAY use replayt **only** for exception types that are part of the public API (e.g. `RunFailed`, `ContextSchemaError`) when testing [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§6.4** mapping—**no** private replayt imports. |
-| **Contract-style (integration seam)** | Prove the adapter behaves correctly when replayt-shaped failures (and, where practical, a **minimal** successful replayt run) occur **inside** `workflow_run_span` | SHOULD include at least one scenario that exercises **replayt’s public** workflow/run path **or** documented helpers (e.g. `run_with_mock`, `Runner` / `Workflow`) **without** importing replayt internals; if a full run is impractical in CI, the **minimum** contract bar remains: public replayt **exception types** raised inside the wrapped block are classified per §6.4 (see existing parametrized mapping tests as the pattern). |
+| **Contract-style (integration seam)** | Prove the adapter behaves correctly when replayt-shaped failures (and, where practical, a **minimal** successful replayt run) occur **inside** `workflow_run_span` | MUST include at least one scenario using **`run_with_mock`** (existing pattern) **and** MUST satisfy [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.4** runnability: either **(i)** a pytest contract that invokes **`Runner.run`** inside **`workflow_run_span`** on a **success** path (and, where practical, documents alignment with failure handling), **or** **(ii)** a standalone runnable script documented in **§3.4** so CI is not the only proof. **Only** replayt **`__all__`** symbols and **EventStore**-compatible in-memory stores (no private replayt imports). Any **`Runner.run`** pytest **MUST** mention **`TESTING_SPEC §4.2`** and **PUBLIC_API_SPEC §3.4** in its docstring. If a full **`Runner`** failure-path contract is impractical, the **minimum** bar remains public replayt **exception types** raised inside the wrapped block classified per §6.4 (see parametrized mapping tests)—**without** dropping the **`Runner.run`** success-path obligation when **§3.4** chooses the pytest option. |
 
 ### 4.3 Success path (minimum)
 
@@ -86,7 +86,7 @@ If the project later adds automatic export-failure handling inside span processo
 The **implementation** backlog for this item is complete when all of the following hold:
 
 1. **§2** acceptance mapping is satisfied by the test tree and CI.
-2. **§4.3–§4.5** minimum scenarios exist and are named or documented in test docstrings referencing the spec sections they lock.
+2. **§4.3–§4.5** minimum scenarios exist and are named or documented in test docstrings referencing the spec sections they lock; **§4.2** contract row is satisfied including [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.4** (`run_with_mock` **and** **`Runner.run`** **or** documented script per that section).
 3. **No replayt private API** imports in `tests/` (only public `replayt` symbols and this package’s API).
 4. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **6** remains true: tests cover span lifecycle, §6 attributes/events, success/failure metrics, provider installation, and `__all__` parity as specified there; gaps are tracked under **Unreleased** in [CHANGELOG.md](../CHANGELOG.md) if intentionally deferred.
 
