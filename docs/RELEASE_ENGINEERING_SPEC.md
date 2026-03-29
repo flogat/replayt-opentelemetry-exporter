@@ -12,13 +12,14 @@ It aligns with **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)** (**Explicit cont
 
 ## 2. Current state (facts for Builder)
 
-At spec time:
+After Builder phase **3** (release engineering implementation):
 
-- **`[project].version`** in **`pyproject.toml`** is **`0.1.0`**.
-- **`replayt_opentelemetry_exporter.__version__`** in **`src/replayt_opentelemetry_exporter/__init__.py`** is a **duplicate literal** **`"0.1.0"`**.
-- **[CHANGELOG.md](../CHANGELOG.md)** has a large **`[Unreleased]`** section and a released **`[0.1.0] - 2026-03-25`** section — i.e. **documented changes** are **ahead** of the **declared package version**, which is the drift this backlog removes going forward.
+- **`[project].version`** in **`pyproject.toml`** is the **only** version **literal** (strategy **B** — **§6.1**).
+- **`replayt_opentelemetry_exporter.__version__`** is set at import time via **`importlib.metadata.version("replayt-opentelemetry-exporter")`** (same value as **`[project].version`** when the distribution is installed).
+- **`tests/test_version_sync.py`** asserts **`pyproject.toml`**, **`importlib.metadata`**, and **`__version__`** stay aligned (**§6.4**).
+- **Tag-gated** publish workflow: [`.github/workflows/publish-pypi.yml`](../.github/workflows/publish-pypi.yml) (**§5.2**).
 
-Builder work MUST resolve that drift as part of satisfying **§7**.
+Historical note (spec time before Builder): **`[project].version`** and **`__init__.py`** both duplicated **`0.1.0`** while **[CHANGELOG.md](../CHANGELOG.md)** accumulated **`[Unreleased]`** work; that drift was resolved by cutting **`[0.2.0]`** and adopting strategy **B**.
 
 ## 3. Backlog acceptance mapping
 

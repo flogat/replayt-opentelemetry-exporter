@@ -13,7 +13,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
-- **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — version single source of truth, changelog alignment, tag-gated PyPI publish (trusted publishing); **Builder** backlog — see that spec **§7**.
+- **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), strategy **B** version sync (**§6.1**), [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) for tag-gated **OIDC** publish (**§5.2**).
 - **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below. For a **`Runner.run`** walk-through with **`MockLLMClient`**, see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md).
 
 ### Public surface at a glance
@@ -148,9 +148,18 @@ Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](do
 
 ## Releases and PyPI (maintainers)
 
-**Normative spec:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), **`python -m build`** + **`twine check`**, **tag** naming (**§6.2**), **CHANGELOG** cut rules (**§6.3**), and **GitHub Actions** sketch for **OIDC trusted publishing** (**§5.2**). The package name on PyPI is **`replayt-opentelemetry-exporter`** (from **`pyproject.toml`** **`[project].name`**).
+**Normative spec:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), **`python -m build`** + **`twine check`**, **tag** naming (**§6.2**), **CHANGELOG** cut rules (**§6.3**), and **GitHub Actions** for **OIDC trusted publishing** (**§5.2**). The package name on PyPI is **`replayt-opentelemetry-exporter`** (from **`pyproject.toml`** **`[project].name`**).
 
-**Status:** Publish automation and version-strategy consolidation are **not** implemented in the spec-only phase; follow **PUBLIC_API_SPEC.md §8** item **13** for the Builder acceptance checklist.
+**Version (strategy B):** The distribution version is **`[project].version`** in **`pyproject.toml`** only. **`replayt_opentelemetry_exporter.__version__`** reads **`importlib.metadata.version("replayt-opentelemetry-exporter")`** so there is no second literal to drift. **`tests/test_version_sync.py`** enforces equality between **`pyproject.toml`**, installed metadata, and **`__version__`**.
+
+**Local build and check** (after `pip install -e ".[dev]"` so **`build`** and **`twine`** are available):
+
+```bash
+python -m build
+twine check dist/*
+```
+
+**Publish on PyPI:** Workflow [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) runs on **`vMAJOR.MINOR.PATCH`** tags (for example **`v0.2.0`**). It builds with **`python -m build`** and uploads using **`pypa/gh-action-pypi-publish`** with **OIDC**; the default path does **not** use a long-lived **`PYPI_API_TOKEN`** repository secret. First-time maintainers register the GitHub repo and workflow in the PyPI project’s **trusted publisher** settings; see [PyPI trusted publishers](https://docs.pypi.org/trusted-publishers/).
 
 ## Security considerations
 
@@ -185,4 +194,5 @@ team's tooling.
 | `tests/` | Pytest suite |
 | `pyproject.toml` | Package metadata, Ruff and pytest settings |
 | `.github/workflows/ci.yml` | Lint and test workflow |
+| `.github/workflows/publish-pypi.yml` | Tag-gated PyPI publish (OIDC trusted publishing) |
 | `.gitignore` | Ignores `.orchestrator/` and `.cursor/skills/` (local tooling) |
