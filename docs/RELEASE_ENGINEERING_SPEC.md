@@ -127,8 +127,49 @@ The **implementation** backlog for *Release engineering: PyPI publish and versio
 
 ## 8. Related documents
 
-- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3**, **§7.3**, **§8** — public **`__version__`**, release snapshot table, Builder checklist item **13**.
+- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3**, **§7.3**, **§8** — public **`__version__`**, release snapshot table, Builder checklist item **13**, checklist items **7** and **16** vs **§9** below.
 - [CI_SPEC.md](CI_SPEC.md) — PR CI permissions and log hygiene vs publish workflow.
 - [CHANGELOG.md](../CHANGELOG.md) — release notes discipline.
 - [README.md](../README.md) — maintainer **Releases** entry point.
 - [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/) — external reference for OIDC setup (informative).
+
+## 9. Integrator release hygiene (changelog, README, milestones)
+
+Normative expectations for **CHANGELOG** cuts, **README** accuracy at ship time, **Upgrading** notes, and optional **GitHub** milestone policy. Cross-check **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** items **7** and **16** in review.
+
+### 9.1 Definitions
+
+- **Dated CHANGELOG section** — A **`[X.Y.Z] - YYYY-MM-DD`** block in **[CHANGELOG.md](../CHANGELOG.md)** for a released **PyPI** version **X.Y.Z**.
+- **`[Unreleased]`** — Notes for work merged to the release branch that is **not** yet part of a dated section.
+- **0.1.0 line** — **PyPI** **0.1.0** was **scaffolding** (packaging and placeholders) and did **not** ship the stable exporter API in **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §3** or the tracing and metrics contract in **§5–§6**. Upgrades from **0.1.0** to **0.2.0** follow **§9.2.4** as **adoption**, not a rename migration, unless a maintainer note documents otherwise.
+
+### 9.2 Maintainer obligations when cutting a PyPI release
+
+When publishing **X.Y.Z** to **PyPI**, maintainers MUST satisfy **§4**, **§6.3**, and the following:
+
+1. **§9.2.1 — CHANGELOG cut** — The new **`[X.Y.Z]`** section contains the user-visible items for that release (moved from **`[Unreleased]`** as appropriate). After **X.Y.Z** is on **PyPI**, **`[Unreleased]`** MUST NOT duplicate bullets that belong only to **X.Y.Z**.
+
+2. **§9.2.2 — Summary and compare** — The dated section MUST include a short summary for integrators and a **verifiable delta** (for example a **GitHub** compare URL from the previous release tag to **`vX.Y.Z`**, or an equivalent release-page link).
+
+3. **§9.2.3 — README vs shipped behavior** — README tracing, metrics, and wiring instructions MUST match **PUBLIC_API_SPEC.md** **§5–§6** and the implementation at **`[project].version` X.Y.Z** under **`src/`**. Integrators SHOULD read the **dated** CHANGELOG section for their installed version and treat **`[Unreleased]`** as unreleased mainline work only.
+
+4. **§9.2.4 — Upgrading / migration** — If the previous **PyPI** release exposed a different public surface (instrument names, lifecycle strings, required setup), the **`[X.Y.Z]`** section MUST include **Upgrading from …** notes or link to them. When the prior line did not ship the current metrics or events (**§9.1**), state **adoption** and document **rename** steps only when they apply.
+
+5. **Version consistency** — **`[project].version`**, git **tag**, distribution metadata, runtime **`__version__`** (per **§6**), and the CHANGELOG **`[X.Y.Z]`** header MUST all match **X.Y.Z**.
+
+### 9.3 GitHub milestones and projects
+
+Repositories **MAY** use **GitHub Milestones** or **Projects** for release buckets. If this repository does **not** use them that way, README **Releases** (or maintainer docs) SHOULD record **N/A** for **§9.3** so integrators do not expect milestone artifacts.
+
+### 9.4 Review acceptance table
+
+Reviewers MAY verify a target release against:
+
+| Check | Expectation |
+| ----- | ----------- |
+| **§9.2.1** | Dated section complete; **Unreleased** does not duplicate shipped **X.Y.Z** notes |
+| **§9.2.2** | Summary plus compare link or equivalent |
+| **§9.2.3** | README and **PUBLIC_API_SPEC.md** **§5–§6** match **`src/`** at **X.Y.Z** |
+| **§9.2.4** | **Upgrading** / adoption vs rename when the prior line differs |
+| **§9.3** | Milestone policy documented or **N/A** |
+| **§9.2** (item **5**) | Version literals and CHANGELOG header agree (**§6**, **§6.3**) |
