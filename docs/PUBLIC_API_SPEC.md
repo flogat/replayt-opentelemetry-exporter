@@ -101,7 +101,7 @@ The backlog item *Release engineering: PyPI publish and version sync* is satisfi
 | ---------------------------- | -------------------- |
 | Repeatable release steps (tag, build, upload) and **CHANGELOG** / version discipline | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§4**, **§6.3** |
 | **Single source of truth** for distribution version and **`__version__`** | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§6**; **§3** here (`__version__` export) |
-| **Tag-gated** GitHub Actions with **trusted publishing** (sketch + Builder checklist) | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§5.2**, **§7** |
+| **Tag-gated** GitHub Actions with **trusted publishing** | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§5.2**, **§7**; **`.github/workflows/publish-pypi.yml`** |
 
 Implementing **`pyproject.toml` / `__init__.py` changes**, **`python -m build`**, **twine**, **publish workflow YAML**, and **drift tests** is **Builder** work; this §1.1 row and [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** are the contracts.
 
