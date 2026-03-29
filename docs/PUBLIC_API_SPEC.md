@@ -37,6 +37,16 @@ The backlog item *Validate OpenTelemetry 2.x and document policy* is satisfied f
 
 Implementing the spike, widening `pyproject.toml`, extending **`.github/workflows/ci.yml`**, and adjusting **`tests/test_pyproject_dependencies.py`** are **Builder** work; **§8** item **12** is the implementation checklist.
 
+The backlog item *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| **`tracing.py` touchpoints** that the spike MUST reconcile with OpenTelemetry **2.x** API/SDK migration notes are enumerated and kept aligned with `src/replayt_opentelemetry_exporter/tracing.py` | **§7.4.1** (normative inventory) |
+| **Go / no-go** (or **defer**) for widening the **`<2`** cap is a **written** maintainer outcome tied to the spike, with rationale | **§7.4.2**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** step **3** |
+| **Non-blocking** automation (optional CI job/workflow or documented branch-only procedure) is specified so **2.x** candidates run **without** making the PR merge gate depend on green **2.x** until **§7.3–7.4** there support it | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.5**; [CI_SPEC.md](CI_SPEC.md) **§2.4** |
+
+Authoring the optional workflow YAML, spike branch, bound widening, and merge-gate matrix cells remains **Builder** work; **§8** item **12** and [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.4–7.5** remain the implementation gates.
+
 The backlog item *Emit traces for replayt workflow run lifecycle with human-readable status* is satisfied for documentation when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -471,9 +481,38 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 ### 7.4 OpenTelemetry 2.x policy (normative)
 
 - **While `pyproject.toml` declares `<2`:** This package **does not** support installing alongside **OpenTelemetry Python API/SDK 2.x**. Integrators MUST stay on **1.x** versions that satisfy the declared lower bound.
-- **Current Builder outcome:** [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** records a **2026-03-29** PyPI audit: **no** published **2.x** for **`opentelemetry-api`** or **`opentelemetry-sdk`** (including pre-releases in the index at that check). Support for **2.x** stays **out of scope** until those packages exist and maintainers complete the full spike there (**§7.2** steps **1–3**) plus **§7.3–7.4** in that document for a *support* merge.
+- **Current Builder outcome:** [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** records a **2026-03-29** PyPI audit: **no** published **2.x** for **`opentelemetry-api`** or **`opentelemetry-sdk`** (including pre-releases in the index at that check). Support for **2.x** stays **out of scope** until those packages exist and maintainers complete the full spike there (**§7.2** steps **1–3**) plus **§7.3–7.4** in that document for a *support* merge. Optional non-blocking automation lives in [`.github/workflows/otel-2x-spike.yml`](../.github/workflows/otel-2x-spike.yml) (see that spec **§7.5** and README **Version compatibility**).
 - **To support 2.x:** Maintainers follow [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7**—spike on a branch, then either widen bounds and expand CI per that section **or** document an explicit continued exclusion with rationale.
 - **Optional OTLP extras:** Any **2.x** support claim MUST include aligned bounds for `opentelemetry-exporter-otlp-proto-http` **and** `opentelemetry-exporter-otlp-proto-grpc` when **`[otlp-grpc]`** is declared (same major line as API/SDK); see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4** and **§7.1**.
+
+#### 7.4.1 `tracing.py` OpenTelemetry touchpoints (spike inventory)
+
+When OpenTelemetry Python **2.x** packages are installable ([COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** step **0** unblocks), maintainers MUST diff upstream **API** and **SDK** migration notes against **every** integration below. The spike record (**§7.4.2**; **§7.2** step **3** in the compatibility spec) MUST include a row per line: **touchpoint**, **1.x usage today**, **2.x impact** (breaking / deprecated / unchanged / unknown), and **follow-up** (code change, test change, docs only, or blocked).
+
+**Normative source file:** `src/replayt_opentelemetry_exporter/tracing.py` (update this table in the same change set if imports or call patterns change materially).
+
+| Area | Touchpoint (indicative) | Why it matters for a major bump |
+| ---- | ----------------------- | -------------------------------- |
+| **Global trace API** | `opentelemetry.trace.set_tracer_provider`, `get_tracer` | Provider installation and `Tracer` resolution for `get_workflow_tracer` / `workflow_run_span`. |
+| **Global metrics API** | `opentelemetry.metrics.set_meter_provider` | Provider installation for instruments used by `workflow_run_span` and `record_*`. |
+| **TracerProvider construction** | `opentelemetry.sdk.trace.TracerProvider`, `add_span_processor`, `BatchSpanProcessor` | `build_tracer_provider` / `install_tracer_provider` wiring. |
+| **Span creation** | `Tracer.start_as_current_span` (including `record_exception`, `set_status_on_exception` kwargs) | Run span lifecycle and the explicit “safe status on re-raise” behavior in **§4.1**. |
+| **Span signals** | `Span.set_attribute`, `Span.add_event`, `Span.set_status`, `Span.record_exception`, `trace.Status` / `StatusCode` | Lifecycle attributes, **§6** events, ERROR status with type-only description. |
+| **Resource** | `opentelemetry.sdk.resources.Resource.create` | `build_resource` attribute schema (`service.name`, `service.version`, integrator extras). |
+| **MeterProvider** | `opentelemetry.sdk.metrics.MeterProvider`, `metric_readers` argument | `build_meter_provider` / `install_meter_provider` construction. |
+| **Metric readers / export** | `PeriodicExportingMetricReader`, `MetricExporter`, `MetricReader` protocol | Periodic export wiring and test doubles (`InMemoryMetricReader`). |
+| **Instruments** | `Meter.get_meter`, `create_counter`, `create_histogram`; `Counter.add`, `Histogram.record` | Canonical instruments in **§5** (`replayt.workflow.run.outcomes_total`, `replayt.workflow.run.duration_ms`, `replayt.exporter.errors_total`) and label attributes. |
+| **Time / span fields** | `Span.start_time`, `Span.end_time` as used by `generate_run_summary` | Summary timestamps and duration derivation. |
+
+#### 7.4.2 Go / no-go for widening `<2`
+
+After **§7.2** steps **1–3** complete (when **2.x** is installable), maintainers MUST publish a **written** decision before widening **`pyproject.toml`** or adding merge-gate **2.x** matrix cells:
+
+- **Go** — Breaking changes are understood, mitigations are scoped (code and/or semver), **§7.3** *support* updates land with bounds and matrix per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.4**, and Ruff + full pytest are green on at least one pinned **2.x** pair as required there.
+- **No-go** — Remain on **1.x** only for this release line; record **why** (e.g. upstream instability, unresolved SDK behavior, or bandwidth) in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.3** *exclusion* row and keep **§7.3** snapshot here accurate.
+- **Defer** — **2.x** installs but the project intentionally postpones support: treat like **no-go** for bounds until a dated follow-up spike is scheduled; document the deferral next to the audit in **§7.2** / **§5**.
+
+The decision MUST reference the **§7.4.1** table (or an updated inventory) so integrators can trace **why** the cap changed or stayed.
 
 ### 7.5 TODO allowed
 
@@ -504,7 +543,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 9. **Operator monitoring** — [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) is satisfied: **`docs/OPERATOR_RUNBOOK.md`** exists (or README carries equivalent depth per that spec), links from README **Metrics** / **Operator monitoring**, and contains the §4–§7 content obligations (PromQL examples, Grafana panel intent, alert starting points) aligned with §5–§6.
 10. **Replayt reference docs** — [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) is satisfied: **`docs/reference-documentation/README.md`** indexes version-stamped snapshots for **Workflow**, **Runner**, **RunContext**, and **run_with_mock** per matrix replayt pins; README and **REPLAYT_ECOSYSTEM_IDEA.md** link per that spec **§5**.
 11. **Runner-based integration example** — **§3.4** is satisfied: **`docs/examples/runner_workflow_run_span.md`** exists, meets **§2.2.1** / **§3.4** content and public-API rules, has **§3.4** runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**, and README links to the markdown as required there.
-12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: **§7.2** either full spike (**steps 1–3**) when **2.x** is on PyPI **or** step **0** PyPI audit recorded when **2.x** is absent; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, this document **§7.4** and README accurate); if **support**: CI matrix meets that document **§7.4** and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** / **`[otlp-grpc]`** pins align with API/SDK.
+12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: **§7.2** either full spike (**steps 1–3**) when **2.x** is on PyPI **or** step **0** PyPI audit recorded when **2.x** is absent; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, this document **§7.4** and README accurate); if **support**: CI matrix meets that document **§7.4** and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** / **`[otlp-grpc]`** pins align with API/SDK. For backlog *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)*: when **2.x** is installable, the spike MUST produce the **§7.4.1** reconciliation and a **§7.4.2** **go** / **no-go** / **defer** record (see **§1.1**); optional **non-blocking** **2.x** automation follows [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.5** and [CI_SPEC.md](CI_SPEC.md) **§2.4** before merge-gate expansion.
 13. **Release engineering** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** is satisfied: one **§6.1** version strategy, README **Releases** entry, **tag-gated** publish workflow with **trusted publishing**, documented **`build` + `twine check`**, **CHANGELOG** alignment (**§6.3**), and a **§6.4** drift guardrail (or documented waiver).
 14. **Python 3.11 requires-python parity** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** and [CI_SPEC.md](CI_SPEC.md) **§3.6**: merge gate runs the **full** replayt×OpenTelemetry matrix on **3.11** and **3.12**; Ruff + pytest match **§3.1** and README on every row; **§7.2**–**§7.3** here and README **Version compatibility** stay aligned (**declared vs tested**).
 15. **Semantic conventions inventory** — **§5.7** and **§6.8** stay accurate for shipped metrics, resource attributes, span names, lifecycle events, and span attribute keys; any rename or new canonical identifier updates **§5–§6**, **§5.7**, **§6.8**, [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) when PromQL examples are affected, README **Metrics** / trace verification when user-facing, tests per [TESTING_SPEC.md](TESTING_SPEC.md) **§5**, and [CHANGELOG.md](../CHANGELOG.md) per the stability rules in **§6.8**.
@@ -522,6 +561,6 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
-- [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).
+- [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, non-blocking experimental jobs (**§7.5**), and CI gating (companion to **§7.4** / **§7.4.1–7.4.2** here).
 - [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (this document **§8** item **13**), **§9** changelog/README/milestone hygiene (this document **§8** item **16**), **§3.1** backlog overlap with **§7.6** / **§8** item **17**.
 - [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/) — informative upstream reference; **§5.7** and **§6.8** document how this package relates to them.
