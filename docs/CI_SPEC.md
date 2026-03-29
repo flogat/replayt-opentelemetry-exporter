@@ -66,7 +66,7 @@ README MUST:
 | Document | Role |
 | -------- | ---- |
 | [TESTING_SPEC.md](TESTING_SPEC.md) | What pytest must prove; local vs CI parity for **tests**. |
-| [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) | Matrix dimensions, pins, and **which** dependency versions each cell exercises. |
+| [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) | Matrix dimensions, pins, and **which** dependency versions each cell exercises. **OpenTelemetry 2.x** cells are **forbidden** until that spec **§7** (spike, docs, gating) is satisfied—expand the workflow only after those obligations are met. |
 | **This document** | **How** CI presents commands, steps, exit codes, and safe logs for Ruff + pytest. |
 
 ## 5. Builder acceptance checklist

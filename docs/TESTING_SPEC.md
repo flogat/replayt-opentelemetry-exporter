@@ -78,8 +78,9 @@ If the project later adds automatic export-failure handling inside span processo
 
 ### 4.6 Dependency and matrix hygiene
 
-- **`tests/test_pyproject_dependencies.py`** (or successor) SHOULD remain the place for **declared** `pyproject.toml` bound checks unless CONTRIBUTING says otherwise.
+- **`tests/test_pyproject_dependencies.py`** (or successor) SHOULD remain the place for **declared** `pyproject.toml` bound checks unless CONTRIBUTING says otherwise. When maintainers widen or narrow OpenTelemetry bounds (including any future **2.x** claim), update those assertions **in the same change** as `pyproject.toml` so CI cannot drift from the spec.
 - Matrix cells in CI MUST continue to run the **full** pytest suite unless a documented subset is approved in this spec and README (default: **full suite**).
+- **OpenTelemetry 2.x:** Do not expect **2.x**-pinned matrix cells until [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied end-to-end (spike, **§7.3** documentation outcome, **§7.4** matrix expansion rules). When **2.x** cells exist, they MUST run the **full** suite like **1.x** cells, and **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **12** MUST be satisfied for the release.
 
 ## 5. Builder acceptance checklist
 
