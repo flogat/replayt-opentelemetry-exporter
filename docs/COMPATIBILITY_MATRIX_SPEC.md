@@ -100,6 +100,7 @@ Maintainers MAY append dated rows when changing bounds:
 | Date | Change | Rationale | Validated by |
 | ---- | ------ | --------- | ------------ |
 | 2026-03-28 | `replayt` lower bound `>=0.4.0`; OTel API/SDK OTLP extra `>=1.20.0,<2` | Tests and `tracing.py` map `RunFailed`, `ContextSchemaError`, and related replayt types; cap OTel below 2 until a validated major bump | `.github/workflows/ci.yml` `test` matrix cells + [CHANGELOG.md](../CHANGELOG.md) **Unreleased** |
+| 2026-03-29 | OpenTelemetry **2.x** explicit exclusion (unchanged `<2` cap) | PyPI had no `opentelemetry-api` / `opentelemetry-sdk` **2.x** (stable or `--pre`) at Builder audit; **§7.2** install blocked per step **0**; support deferred until published **2.x** and full spike | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** audit paragraph; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4** |
 
 ## 6. Acceptance criteria summary
 
@@ -123,11 +124,14 @@ This section is the **normative** contract for backlog item *Validate OpenTeleme
 
 Before widening bounds or adding matrix cells for **2.x**, maintainers MUST run a **spike** on a **branch** (not necessarily merged) that:
 
+0. **Prerequisite — published packages:** If **no** `opentelemetry-api` / `opentelemetry-sdk` **2.x** release or pre-release is available on **PyPI**, the install step below is **blocked**. A **Builder** pass MUST still record that audit (tooling used, date, and outcome: no installable **2.x**) in this section or **§5**, keep the **`<2`** cap, and treat **§7.3** *explicit exclusion* as satisfied until **2.x** appears—then run steps **1–3** before claiming support.
 1. **Installs** OpenTelemetry **2.x** for API and SDK (and, if validating export paths, the matching **2.x** OTLP HTTP exporter version) using **published** packages—**pre-release** wheels are acceptable when **stable 2.x** is not yet on PyPI, provided the spike documents the exact versions used.
 2. **Runs** the same quality gates this repository expects for a merge candidate: **Ruff** lint, **Ruff** format check, and **full `pytest`** from the repository root (same invocations as [CI_SPEC.md](CI_SPEC.md) **§3.1**), after reconciling any **code** changes required for API or semantic-convention differences.
 3. **Records** findings: breaking API changes, deprecated patterns in `src/`, test adjustments, and any integrator-facing migration notes.
 
 The spike proves **feasibility**; **shipping** support still requires **§7.3–7.4**.
+
+**Builder audit (phase 3, 2026-03-29):** `pip index versions opentelemetry-api` and `pip index versions opentelemetry-api --pre` on PyPI showed **no** **2.x** line for **`opentelemetry-api`** (latest **1.40.0**). The same constraint applies to **`opentelemetry-sdk`** (paired releases). No **2.x** install or Ruff/pytest spike was possible; this package remains **1.x**-only with **`>=1.20.0,<2`** until **2.x** packages exist and a maintainer repeats **§7.2** steps **1–3**.
 
 ### 7.3 Documentation outcomes (required before merge)
 
@@ -149,7 +153,7 @@ After the spike, the **merge** that claims **2.x** support (or the decision **no
 | Phase | Criterion |
 | ----- | --------- |
 | **Spec (phase 2)** | **§7** exists with spike workflow, documentation outcomes table, and CI gating; **§3.3** references **§7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps this backlog; **§7.4** there states integrator-facing **1.x** / **2.x** policy and cross-links here. |
-| **Builder (phase 3+)** | Spike executed per **§7.2**; **§7.3** satisfied for support or exclusion; if support: `pyproject.toml`, CI matrix per **§7.4**, README, CHANGELOG, and tests green on claimed bounds; if exclusion: docs and rationale per **§7.3** without widening `<2`. |
+| **Builder (phase 3+)** | **§7.2** satisfied: full spike (**1–3**) when **2.x** is on PyPI, **or** **§7.2** step **0** audit recorded when **2.x** is absent; **§7.3** satisfied for support or exclusion; if support: `pyproject.toml`, CI matrix per **§7.4**, README, CHANGELOG, and tests green on claimed bounds; if exclusion: docs and rationale per **§7.3** without widening `<2`. |
 
 ## 8. Related documents
 

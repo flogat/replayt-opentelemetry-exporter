@@ -54,6 +54,21 @@ def test_pyproject_declares_replayt_otel_lower_and_otel_upper_bounds() -> None:
         assert not spec.contains(Version("2.0.0"))
 
 
+def test_pyproject_otlp_extra_aligns_with_api_sdk_otel_bounds() -> None:
+    """COMPATIBILITY_MATRIX_SPEC §3.4 / §7: [otlp] stays on the same OTel major line as API/SDK."""
+    data = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))
+    optional = data["project"].get("optional-dependencies") or {}
+    otlp = optional.get("otlp") or []
+    assert otlp, "pyproject.toml must declare [project.optional-dependencies].otlp"
+    otlp_reqs = [Requirement(line) for line in otlp]
+    by_extra = {r.name: r for r in otlp_reqs}
+    assert "opentelemetry-exporter-otlp-proto-http" in by_extra
+    spec = by_extra["opentelemetry-exporter-otlp-proto-http"].specifier
+    assert spec.contains(Version("1.20.0"))
+    assert spec.contains(Version("1.40.0"))
+    assert not spec.contains(Version("2.0.0"))
+
+
 def test_requires_python_matches_project_and_runtime() -> None:
     data = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))
     assert data["project"]["requires-python"] == ">=3.11"
