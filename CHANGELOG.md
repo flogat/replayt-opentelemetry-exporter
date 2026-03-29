@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Phase **3** builder (*Harden SECURITY_REDACTION tests for workflow_run_span attributes*): **`tests/test_tracing.py`** replaces single-case optional-`attributes` checks with parametrized coverage per [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§4.7**: every exact blocked key from **`tracing._EXACT_BLOCKED_ATTRIBUTE_KEYS`**, substring/suffix/case rows aligned with [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md), **100**-code-point truncation boundaries, and reserved **`replayt.workflow.id`** / **`replayt.run.id`** override attempts (including **`run_id=None`**).
 - Phase **3** builder (*Semantic conventions review for span and metric names*): **`tests/test_tracing.py`** adds **`test_public_api_spec_semantic_inventory_matches_tracing`**, locking canonical metric instrument names, meter scope **`replayt.workflow`**, **`build_resource`** **service.** resource keys, lifecycle event and completion attribute strings, and the default **`workflow_run_span`** span name to [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.7** / **§6.8** per [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§5** item **5**.
 
 ### Documentation
