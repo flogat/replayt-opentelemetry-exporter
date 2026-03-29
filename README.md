@@ -36,12 +36,12 @@ Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 
 | Component | Supported range (see `pyproject.toml`) | CI / validation |
 | --------- | -------------------------------------- | ---------------- |
-| Python | `>=3.11` (`requires-python`, **declared** floor) | **Normative (merge gate):** job **`test`** MUST run the **full** four-cell replayt×OpenTelemetry matrix on **3.11** and on **3.12** (eight rows)—[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**, [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6** (*requires-python parity*). **Current workflow (transitional):** the four cells run on **3.12** only on PR; **3.11** is additionally exercised by job **`test-python-3-11`** (one pin set, `schedule` + `workflow_dispatch`) until Builder closes the gap—**§4.3** in the compatibility spec. |
+| Python | `>=3.11` (`requires-python`, **declared** floor) | Job **`test`** in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the **full** four-cell replayt×OpenTelemetry matrix on **3.11** and **3.12** (eight rows on `push` / `pull_request`)—[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**, [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6** (*requires-python parity*). |
 | OpenTelemetry API / SDK | `>=1.20.0,<2` each | `test` **strategy.matrix**: pins **1.20.0** and **1.40.0** (each cell reinstalls API + SDK to the same version); **Print resolved dependency versions** logs `replayt`, `opentelemetry-api`, `opentelemetry-sdk` |
 | replayt | `>=0.4.0` (no upper cap yet—see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§3**) | Same matrix: **0.4.0** and PyPI **latest** (`pip install --upgrade --force-reinstall replayt`) |
 | OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http>=1.20.0,<2` | Same OpenTelemetry major as API/SDK; install locally with `pip install -e ".[dev,otlp]"` and match a matrix cell if you need parity |
 
-Matrix updates are validated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml): **today**, each push runs **Ruff** and **pytest** once per matrix cell on **3.12** (four rows). After **requires-python parity** ships, expect **eight** merge-blocking rows (**3.11** × four cells + **3.12** × four cells). Job **`test-python-3-11`** (transitional) runs the same Ruff and pytest commands for one pin set (**replayt** latest, OpenTelemetry API/SDK **1.40.0**) on **`schedule`** and **`workflow_dispatch`** only—see [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3**. Approximate a cell locally with `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), then `pytest` from the repo root after `pip install -e ".[dev]"`.
+Matrix updates are validated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml): each qualifying **`push`** / **`pull_request`** runs **Ruff** and **pytest** once per matrix cell (**eight** rows: **3.11** and **3.12** × four replayt×OpenTelemetry combinations). Approximate a cell locally with the Python minor you care about, `pip install -e ".[dev]"`, then `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), and `pytest` from the repo root.
 
 ## Design principles
 
@@ -81,7 +81,7 @@ python -m ruff format --check src tests
 
 **CI entry point:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — job **`test`** runs the Ruff and pytest commands above (after matrix pins) in **separate steps** so the Actions UI shows whether lint, format, or tests failed; see **[docs/CI_SPEC.md](docs/CI_SPEC.md)** for the full contract.
 
-**Normative:** merge-blocking CI should run those steps on **Python 3.11** and **3.12** for **each** replayt×OpenTelemetry cell ([docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**). **Today**, job **`test`** uses **3.12** only (four matrix rows); job **`test-python-3-11`** repeats the same Ruff/pytest steps for one pin set on **3.11** when the workflow runs on **`schedule`** or **`workflow_dispatch`**. There is no **`CONTRIBUTING.md`**; local commands above are the contributor contract. See [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3** and [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**.
+**CI:** job **`test`** runs the same steps on **Python 3.11** and **3.12** for **each** replayt×OpenTelemetry cell ([docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**, [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**). There is no **`CONTRIBUTING.md`**; local commands above are the contributor contract.
 
 ## Enable tracing and metrics in development
 

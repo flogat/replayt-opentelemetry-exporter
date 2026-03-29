@@ -79,7 +79,7 @@ When `[project].requires-python` is **`>=3.11`** and maintainers also test a **n
 
 1. **Merge gate** — Job **`test`** (or its successor) MUST exercise the **full** four-cell replayt×OpenTelemetry matrix on **Python 3.11** and on **Python 3.12** on every **`push` / `pull_request`** that gates merges—**eight** rows total unless this spec and [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** are amended together. That satisfies **requires-python parity**: the declared **minimum** minor is covered by the same matrix depth as **3.12**.
 2. **Ruff / pytest** — Each row runs **§3.1** commands (`ruff check src tests`, `ruff format --check src tests`, `pytest -q` in the workflow, equivalent to README’s **`python -m ruff …`**). **`[tool.ruff]` `target-version`** in `pyproject.toml` MUST remain consistent with the lowest merge-blocking minor (**py311** today).
-3. **Transitional supplemental job** — Until **§4.1** of [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) is implemented in YAML, job **`test-python-3-11`** MAY remain as a **partial** **3.11** check (**§4.3** there); it **does not** replace the obligation in item **1** above.
+3. **No duplicate Python story** — Do **not** add a second merge-adjacent **3.11** job that contradicts item **1** without updating [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** and README together. The historical **`test-python-3-11`** layout is documented there as **removed** once **§4.1** is satisfied in YAML.
 4. **Resolved versions** — Every merge-blocking row SHOULD print resolved **`replayt`**, **`opentelemetry-api`**, and **`opentelemetry-sdk`** versions (same style as today’s **`test`** job).
 
 ## 4. Where this spec sits in the doc set
@@ -100,7 +100,7 @@ The **implementation** backlog for *Add CI with ruff, tests, and readable logs* 
 4. **§3.5** — README satisfies the entry-point and link requirements; **local Ruff invocations** in README match CI’s path set (or README explicitly states equivalent `ruff check .` / `ruff format --check .` when `[tool.ruff]` makes that equivalent).
 5. [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) **Observable automation** remains satisfied in review (clear logs, meaningful exit codes).
 6. **§3.6** — Merge gate runs the **full** replayt×OpenTelemetry matrix on **Python 3.11** and **3.12** per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**; Ruff and pytest invocations match **§3.1** and README on every row.
-7. **§3.6** — When parity is implemented, **`test-python-3-11`** is **removed** or **re-justified** per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** so contributors do not see two conflicting Python **3.11** stories.
+7. **§3.6** — Parity keeps a single **`test`** matrix story for **3.11** and **3.12**; any return of a supplemental **3.11**-only job needs an explicit spec + README rationale per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3**.
 
 ## 6. Related documents
 
