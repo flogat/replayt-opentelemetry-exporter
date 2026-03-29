@@ -14,7 +14,7 @@ def test_operator_runbook_exists() -> None:
 
 
 def test_operator_runbook_contract() -> None:
-    """OPERATOR_MONITORING_SPEC §3–§7: PromQL, panels, alerts, cardinality pointers."""
+    """OPERATOR_MONITORING_SPEC §2, §4–§7 (scrape caveat, PromQL, panels, alerts, non-goals)."""
     text = _RUNBOOK.read_text(encoding="utf-8")
 
     assert "PUBLIC_API_SPEC.md" in text
