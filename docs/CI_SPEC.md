@@ -34,6 +34,18 @@ The backlog item *Expand CI matrix to include Python 3.11 (requires-python parit
 
 The earlier backlog *Expand CI matrix with optional Python 3.11 job* is **superseded** for merge-gate policy: a **`schedule`-only** supplemental job does **not** alone satisfy *requires-python parity* ([COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** describes the transitional layout until **§4.1** is implemented).
 
+### 2.3 Backlog — *Add optional `[otlp-grpc]` extra and README example for gRPC exporters*
+
+The backlog body asks to extend **CI or docs** for OTLP transport choice. Normative split:
+
+| Expectation | Normative requirement |
+| ----------- | --------------------- |
+| **Minimum (merge gate unchanged)** | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4.3** (README: HTTP vs gRPC, env vars, gRPC example) **fully satisfies** the “extend docs” path; **no** new **`test`** matrix rows are **required** for this backlog. |
+| **Recommended test-side guard** | **`tests/test_pyproject_dependencies.py`** (or successor) asserts **`[otlp-grpc]`** pins mirror **`[otlp]`**—runs in existing cells without new install cost beyond editable **`[dev]`** if the test only reads `pyproject.toml`. |
+| **Optional CI hardening** | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4.4**: one matrix cell **MAY** `pip install -e ".[dev,otlp-grpc]"` and run a **non-network** import or smoke step in a **separately named** workflow step so failures identify the optional extra (follow **§3.2** naming rules). |
+
+If maintainers add an optional CI step, README **CI entry point** SHOULD mention it when it becomes part of the documented contributor story; default remains **§3.1** Ruff + pytest only.
+
 ## 3. Normative CI behavior
 
 ### 3.1 Commands (Ruff and pytest)

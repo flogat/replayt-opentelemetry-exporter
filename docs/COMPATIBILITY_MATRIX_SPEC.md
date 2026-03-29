@@ -32,7 +32,7 @@ The published matrix MUST include **one row per logical dependency** this packag
 | **CI / validation** | How this row is validated: e.g. “default CI job”, “matrix job cell `replayt==x.y.z`”, or “documented only (not yet in matrix)” during transition—see **§4**. |
 | **Notes** | Optional: reference replayt line used in examples, OTel major policy, link to CHANGELOG entry when bounds change. |
 
-Optional rows for **`[project.optional-dependencies]`** (e.g. OTLP HTTP extra) SHOULD appear when integrators routinely need alignment (same OTel major as API/SDK).
+Optional rows for **`[project.optional-dependencies]`** (for example OTLP **HTTP** `[otlp]` and OTLP **gRPC** `[otlp-grpc]`—see **§3.4**) SHOULD appear when integrators routinely need alignment (same OpenTelemetry major as API/SDK).
 
 ### 2.3 Consistency rule
 
@@ -65,9 +65,37 @@ Rationale examples: “minimum replayt version that exposes `RunContext` used in
 - **replayt:** Upper bounds are **allowed and encouraged** once a breaking replayt release is known or to narrow the support claim to tested lines. Until then, a lower bound only is acceptable if README and this spec **explicitly** state that **latest satisfying the lower bound** is what CI exercises (current single-job behavior).
 - **OpenTelemetry:** Stay on a **single supported major** per release unless CHANGELOG documents a major bump and matrix coverage. Upper caps (e.g. `<2`) MAY be used to avoid surprise major upgrades before validation. **OpenTelemetry 2.x** is governed by **§7** until this package explicitly supports it or documents a permanent exclusion with rationale.
 
-### 3.4 Optional OTLP extra
+### 3.4 Optional OTLP extras (`[otlp]` HTTP and `[otlp-grpc]` gRPC)
 
-If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-proto-http`, its bounds SHOULD be justified with the same OTel major/minor story as API/SDK.
+**Backlog:** *Add optional `[otlp-grpc]` extra and README example for gRPC exporters* — normative detail and acceptance mapping: **§6** (this document), [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** / **§8** item **18**, [CI_SPEC.md](CI_SPEC.md) **§2.3**, [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6** (pyproject bound checks).
+
+#### 3.4.1 `[otlp]` (HTTP)
+
+If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-proto-http`, its bounds SHOULD be justified with the same OpenTelemetry major/minor story as API/SDK (today: **`>=1.20.0,<2`**, mirroring `[project.dependencies]` for API/SDK).
+
+#### 3.4.2 `[otlp-grpc]` (gRPC) — Builder obligation
+
+The distribution MUST declare **`[project.optional-dependencies].otlp-grpc`** (PEP 621 extra key: `otlp-grpc`) listing **`opentelemetry-exporter-otlp-proto-grpc`** with **the same version specifiers** as the HTTP extra (**character-for-character equality** of the requirement string to **`opentelemetry-exporter-otlp-proto-http`** in **`[otlp]`**, unless a single shared constraint is refactored in `pyproject.toml` and both extras reference it—either way, resolved bounds for the two exporter packages MUST stay aligned on the **1.x** / **`<2`** line until [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** allows otherwise).
+
+**Rationale (for README matrix or **§5**):** gRPC is a common production transport for OTLP collectors and meshes; shipping a pinned extra avoids integrators guessing a compatible exporter line next to this package’s API/SDK range.
+
+#### 3.4.3 README and operator guidance (HTTP vs gRPC)
+
+The root **[README.md](../README.md)** MUST, in addition to the existing OTLP HTTP walk-through:
+
+1. **Install** — Document `pip install -e ".[dev,otlp-grpc]"` (or `replayt-opentelemetry-exporter[otlp-grpc]` for integrators) alongside **`[otlp]`**, and state that integrators normally choose **one** transport extra unless they have a documented need for both.
+2. **Minimal wiring** — Show **`install_tracer_provider`** and **`install_meter_provider`** with **`OTLPSpanExporter`** and **`OTLPMetricExporter`** imported from **`opentelemetry.exporter.otlp.proto.grpc`** (`trace_exporter` / `metric_exporter` submodules per OpenTelemetry Python’s public layout at the pinned version). The snippet MUST mirror the structure of the HTTP example in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.3** (same adapter imports and provider install pattern; only exporter classes and install extra differ).
+3. **Environment variables** — Document at least **`OTEL_EXPORTER_OTLP_ENDPOINT`** (and note trace- or metrics-specific endpoint variables when split). Mention **`OTEL_EXPORTER_OTLP_PROTOCOL`** / **`OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`** / **`OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`** where integrators must force **`grpc`** (or avoid HTTP/protobuf defaults) for their collector. Cross-link or one-line pointer to upstream OTLP exporter docs for full env reference.
+4. **When to pick HTTP vs gRPC** — Short integrator-facing guidance (bullet list or paragraph): **HTTP** — typical behind **L7 load balancers**, restrictive proxies, and some serverless or gateway-only paths; **gRPC** — common with **Kubernetes** service meshes, some vendor collectors, and **HTTP/2**-native paths; **TLS / mTLS** — both transports support TLS; mTLS and corporate PKI details stay in OpenTelemetry and platform docs (README states that operators follow distro/collector guidance). This section satisfies the backlog’s “extend CI **or** docs” clause via **docs**; CI extensions are optional per **§3.4.4**.
+
+#### 3.4.4 CI (optional)
+
+The merge gate **MAY** remain unchanged (no new matrix rows) if **§3.4.3** and the README **Version compatibility** table row for **`[otlp-grpc]`** ship together. **Optional** Builder hardening (pick **one** unless maintainers agree more):
+
+- Add a **documentation** or **supply-chain** step that installs **`".[dev,otlp-grpc]"`** on **one** existing matrix cell and runs **`import opentelemetry.exporter.otlp.proto.grpc`** (or a tiny smoke script) **without** adding network-backed export tests, **or**
+- Extend **`tests/test_pyproject_dependencies.py`** (or successor) so **`[otlp-grpc]`** bounds are asserted like **`[otlp]`** today (recommended minimum—keeps pins honest without new workflow rows).
+
+Network integration tests against a real collector are **out of scope** for this backlog unless a future spec explicitly requires them.
 
 ## 4. How matrix updates are validated (CI and docs)
 
@@ -126,13 +154,15 @@ Maintainers MAY append dated rows when changing bounds:
 | **Spec (phase 2)** — *Validate OpenTelemetry 2.x and document policy* | **§7** (spike, documentation outcomes, CI gating); **§3.3** and **§4** reference **§7** where relevant; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps the backlog and **§7.4** states integrator-facing **1.x** / **2.x** policy; CHANGELOG **Unreleased** notes the spec pass. |
 | **Spec (phase 2)** — *Expand CI matrix with optional Python 3.11 job* | Historical: merge-gate policy superseded by *Expand CI matrix to include Python 3.11 (requires-python parity)*; **§4.3** records the old supplemental job. |
 | **Spec (phase 2)** — *Expand CI matrix to include Python 3.11 (requires-python parity)* | **§4.1** merge-blocking **3.11** + **3.12** × four replayt×OTel cells; **§4.2** item **4**; **§4.3** historical supplemental job; [CI_SPEC.md](CI_SPEC.md) **§2.2**, **§3.6**, **§5** items **6–7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** / **§8** item **14**; README **Version compatibility** (**declared vs tested**); CHANGELOG **Unreleased** notes this spec pass. |
+| **Spec (phase 2)** — *Add optional `[otlp-grpc]` extra and README example for gRPC exporters* | **§3.4** (extras, README content, optional CI); [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** / **§8** item **18**; [CI_SPEC.md](CI_SPEC.md) **§2.3**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6**; CHANGELOG **Unreleased** notes this spec pass. |
 | **Builder (phase 3+)** — matrix / pins backlog | Matrix table populated per **§2**; `pyproject.toml` bounds match table; justifications per **§3**; CI matrix per **§4.2**; CHANGELOG records dependency-facing changes. |
+| **Builder (phase 3+)** — *Add optional `[otlp-grpc]` extra and README example for gRPC exporters* | **`[otlp-grpc]`** in `pyproject.toml` per **§3.4.2**; README **§3.4.3**; **Version compatibility** table row; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§8** item **18**; bound check in **`tests/test_pyproject_dependencies.py`** per **§3.4.4**; optional CI/smoke per **§3.4.4**; CHANGELOG **Unreleased** when shipping. |
 | **Builder (phase 3+)** — *Expand CI matrix to include Python 3.11 (requires-python parity)* | Job **`test`** implements **§4.1** (eight matrix rows); **`test-python-3-11`** removed per **§4.3**; README **CI / validation** column; **`tests/test_ci_workflow.py`**; Ruff + pytest match **[CI_SPEC.md](CI_SPEC.md) §3.1** and README; CHANGELOG **Unreleased** when behavior ships. |
 | **Builder (phase 3+)** — *OpenTelemetry 2.x* | **§7.5** Builder row. |
 
 ## 7. OpenTelemetry 2.x validation, policy, and CI gating
 
-This section is the **normative** contract for backlog item *Validate OpenTelemetry 2.x and document policy*. It applies to **`opentelemetry-api`**, **`opentelemetry-sdk`**, and the optional **`[otlp]`** extra (`opentelemetry-exporter-otlp-proto-http`), which MUST stay on the **same** supported OpenTelemetry major/minor story as API/SDK.
+This section is the **normative** contract for backlog item *Validate OpenTelemetry 2.x and document policy*. It applies to **`opentelemetry-api`**, **`opentelemetry-sdk`**, and the optional **`[otlp]`** / **`[otlp-grpc]`** extras (`opentelemetry-exporter-otlp-proto-http`, `opentelemetry-exporter-otlp-proto-grpc`), which MUST stay on the **same** supported OpenTelemetry major/minor story as API/SDK.
 
 ### 7.1 Current declared position (until a Builder changes it)
 
@@ -144,7 +174,7 @@ This section is the **normative** contract for backlog item *Validate OpenTeleme
 Before widening bounds or adding matrix cells for **2.x**, maintainers MUST run a **spike** on a **branch** (not necessarily merged) that:
 
 0. **Prerequisite — published packages:** If **no** `opentelemetry-api` / `opentelemetry-sdk` **2.x** release or pre-release is available on **PyPI**, the install step below is **blocked**. A **Builder** pass MUST still record that audit (tooling used, date, and outcome: no installable **2.x**) in this section or **§5**, keep the **`<2`** cap, and treat **§7.3** *explicit exclusion* as satisfied until **2.x** appears—then run steps **1–3** before claiming support.
-1. **Installs** OpenTelemetry **2.x** for API and SDK (and, if validating export paths, the matching **2.x** OTLP HTTP exporter version) using **published** packages—**pre-release** wheels are acceptable when **stable 2.x** is not yet on PyPI, provided the spike documents the exact versions used.
+1. **Installs** OpenTelemetry **2.x** for API and SDK (and, if validating export paths, the matching **2.x** OTLP **HTTP** and **gRPC** exporter versions when those extras are declared) using **published** packages—**pre-release** wheels are acceptable when **stable 2.x** is not yet on PyPI, provided the spike documents the exact versions used.
 2. **Runs** the same quality gates this repository expects for a merge candidate: **Ruff** lint, **Ruff** format check, and **full `pytest`** from the repository root (same invocations as [CI_SPEC.md](CI_SPEC.md) **§3.1**), after reconciling any **code** changes required for API or semantic-convention differences.
 3. **Records** findings: breaking API changes, deprecated patterns in `src/`, test adjustments, and any integrator-facing migration notes.
 
@@ -158,7 +188,7 @@ After the spike, the **merge** that claims **2.x** support (or the decision **no
 
 | Outcome | Updates required |
 | ------- | ---------------- |
-| **Support 2.x** (range may include 1.x and 2.x or 2.x-only—decide explicitly) | `[project.dependencies]` and **`[otlp]`** bounds in `pyproject.toml`; **§2** matrix table and **§5** maintenance log row with rationale; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7** (including **§7.3** snapshot table); README **Version compatibility**; [CHANGELOG.md](../CHANGELOG.md) **Unreleased**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6** expectations for bound checks. |
+| **Support 2.x** (range may include 1.x and 2.x or 2.x-only—decide explicitly) | `[project.dependencies]` and **`[otlp]`** / **`[otlp-grpc]`** bounds in `pyproject.toml`; **§2** matrix table and **§5** maintenance log row with rationale; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7** (including **§7.3** snapshot table); README **Version compatibility**; [CHANGELOG.md](../CHANGELOG.md) **Unreleased**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6** expectations for bound checks. |
 | **Explicit exclusion** (remain on **1.x** only for a release line) | This section or **§5** documents **why** (e.g. upstream instability, breaking SDK behavior not yet justified, or satellite bandwidth); [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7** states integrators must not expect 2.x; README and **§2** matrix **CI / validation** column stay accurate (still **1.x**-only matrix). |
 
 ### 7.4 CI matrix expansion (after bounds are justified)

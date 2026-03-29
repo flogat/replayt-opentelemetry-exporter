@@ -41,6 +41,7 @@ Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 | OpenTelemetry API / SDK | `>=1.20.0,<2` each | `test` **strategy.matrix**: pins **1.20.0** and **1.40.0** (each cell reinstalls API + SDK to the same version); **Print resolved dependency versions** logs `replayt`, `opentelemetry-api`, `opentelemetry-sdk` |
 | replayt | `>=0.4.0` (no upper cap yet—see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§3**) | Same matrix: **0.4.0** and PyPI **latest** (`pip install --upgrade --force-reinstall replayt`) |
 | OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http>=1.20.0,<2` | Same OpenTelemetry major as API/SDK; install locally with `pip install -e ".[dev,otlp]"` and match a matrix cell if you need parity |
+| OTLP gRPC extra (`[otlp-grpc]`) | `opentelemetry-exporter-otlp-proto-grpc>=1.20.0,<2` | Same bounds as **`[otlp]`**; install with `pip install -e ".[dev,otlp-grpc]"` (or `replayt-opentelemetry-exporter[otlp-grpc]`). CI does not reinstall this extra on every matrix row; bounds are checked in **`tests/test_pyproject_dependencies.py`**. |
 
 Matrix updates are validated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml): each qualifying **`push`** / **`pull_request`** runs **Ruff** and **pytest** once per matrix cell (**eight** rows: **3.11** and **3.12** × four replayt×OpenTelemetry combinations). Approximate a cell locally with the Python minor you care about, `pip install -e ".[dev]"`, then `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), and `pytest` from the repo root.
 
@@ -95,13 +96,19 @@ python -m ruff format --check src tests
 
 ## Enable tracing and metrics in development
 
-1. Install runtime dependencies (included in the default package) and, for OTLP HTTP export, the optional extra:
+1. Install runtime dependencies (included in the default package) and **one** OTLP transport extra (HTTP or gRPC). You rarely need both in the same environment unless you have a documented reason.
 
    ```bash
-   pip install -e ".[dev,otlp]"
+   pip install -e ".[dev,otlp]"          # OTLP over HTTP
+   # or
+   pip install -e ".[dev,otlp-grpc]"    # OTLP over gRPC
    ```
 
+   For a published wheel: `pip install "replayt-opentelemetry-exporter[otlp]"` or `replayt-opentelemetry-exporter[otlp-grpc]`.
+
 2. Wire a tracer provider and exporter, then use `workflow_run_span` around the integrator-owned block that runs a workflow (for example the code that calls replayt’s `Runner` / `Workflow` / `run_with_mock`). See **§2** and **§3** of [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) for the integration seam and full `__all__` list.
+
+   **OTLP HTTP** (after `pip install -e ".[dev,otlp]"`):
 
    ```python
    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -114,7 +121,6 @@ python -m ruff format --check src tests
        workflow_run_span,
    )
 
-   # Install both tracer and meter providers
    install_tracer_provider(span_exporters=[OTLPSpanExporter()])
    install_meter_provider(metric_exporters=[OTLPMetricExporter()])
 
@@ -123,7 +129,32 @@ python -m ruff format --check src tests
        ...  # e.g. replayt Runner / Workflow invocation
    ```
 
-3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend. Verify span **events** `replayt.workflow.run.started` and `replayt.workflow.run.completed` and completion attributes such as `replayt.workflow.outcome` (and on failures `replayt.workflow.error.type` / `replayt.workflow.failure.category`) so operators can see run start and outcome without reading raw exception messages in attributes. Names and semantics are defined in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6**; **§6.8** states how those names relate to OpenTelemetry trace conventions and rename policy.
+   **OTLP gRPC** (after `pip install -e ".[dev,otlp-grpc]"`):
+
+   ```python
+   from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+   from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+
+   from replayt_opentelemetry_exporter import (
+       install_tracer_provider,
+       install_meter_provider,
+       get_workflow_tracer,
+       workflow_run_span,
+   )
+
+   install_tracer_provider(span_exporters=[OTLPSpanExporter()])
+   install_meter_provider(metric_exporters=[OTLPMetricExporter()])
+
+   tracer = get_workflow_tracer()
+   with workflow_run_span(tracer, "my-workflow-id", run_id="optional-run-id"):
+       ...  # e.g. replayt Runner / Workflow invocation
+   ```
+
+3. **Endpoints and protocol** — Set `OTEL_EXPORTER_OTLP_ENDPOINT` to your collector (for example a Jaeger OTLP URL). For traces or metrics alone, you can use `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` / `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`. If the collector or defaults assume the wrong transport, set `OTEL_EXPORTER_OTLP_PROTOCOL`, or `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` / `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`, to `http/protobuf` or `grpc` as required. Full variable lists live in the [OpenTelemetry environment variable spec](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/) and your exporter package docs.
+
+4. **HTTP vs gRPC** — **HTTP** fits many setups behind L7 load balancers, restrictive proxies, and some gateway-only or serverless paths. **gRPC** is common with Kubernetes-oriented collectors, some vendor stacks, and HTTP/2-native paths. **TLS** works for both; **mTLS** and corporate PKI follow your OpenTelemetry distro and platform docs.
+
+5. Confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend. Verify span **events** `replayt.workflow.run.started` and `replayt.workflow.run.completed` and completion attributes such as `replayt.workflow.outcome` (and on failures `replayt.workflow.error.type` / `replayt.workflow.failure.category`) so operators can see run start and outcome without reading raw exception messages in attributes. Names and semantics are defined in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6**; **§6.8** states how those names relate to OpenTelemetry trace conventions and rename policy.
 
 For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`. For in-process metric assertions, pass `metric_readers=[InMemoryMetricReader()]` to `build_meter_provider`; OTLP and similar backends keep using `metric_exporters`.
 
