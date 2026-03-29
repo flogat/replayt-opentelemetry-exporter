@@ -36,3 +36,4 @@ def test_publish_workflow_permissions_oidc_and_tag_trigger() -> None:
     run_blocks = [s.get("run") for s in steps if isinstance(s, dict) and s.get("run")]
     joined = "\n".join(r for r in run_blocks if isinstance(r, str))
     assert "python -m build" in joined, "expected python -m build in a run step"
+    assert "twine check" in joined, "expected twine check dist/* in a run step"

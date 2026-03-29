@@ -17,7 +17,7 @@ After Builder phase **3** (release engineering implementation):
 - **`[project].version`** in **`pyproject.toml`** is the **only** version **literal** (strategy **B** — **§6.1**).
 - **`replayt_opentelemetry_exporter.__version__`** is set at import time via **`importlib.metadata.version("replayt-opentelemetry-exporter")`** (same value as **`[project].version`** when the distribution is installed).
 - **`tests/test_version_sync.py`** asserts **`pyproject.toml`**, **`importlib.metadata`**, and **`__version__`** stay aligned (**§6.4**).
-- **Tag-gated** publish workflow: [`.github/workflows/publish-pypi.yml`](../.github/workflows/publish-pypi.yml) (**§5.2**).
+- **Tag-gated** publish workflow: [`.github/workflows/publish-pypi.yml`](../.github/workflows/publish-pypi.yml) (**§5.2**), including **`twine check dist/*`** after **`python -m build`** (same **§5.1** gate as local releases).
 
 Historical note (spec time before Builder): **`[project].version`** and **`__init__.py`** both duplicated **`0.1.0`** while **[CHANGELOG.md](../CHANGELOG.md)** accumulated **`[Unreleased]`** work; that drift was resolved by cutting **`[0.2.0]`** and adopting strategy **B**.
 
