@@ -119,7 +119,7 @@ For tests or custom wiring without touching the global provider, use `build_trac
 
 ## Metrics
 
-Canonical **instrument names**, types, and semantics are defined in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5** (and tracked under **Unreleased** in [CHANGELOG.md](CHANGELOG.md)); **§5.7** covers meter scope, resource keys, and how those names relate to OpenTelemetry metrics and resource conventions. Summary:
+Canonical **instrument names**, types, and semantics are defined in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5**; the **[CHANGELOG.md](CHANGELOG.md)** section dated for your installed version lists what shipped, and **Unreleased** holds merged work not yet on PyPI. **§5.7** covers meter scope, resource keys, and how those names relate to OpenTelemetry metrics and resource conventions. Summary:
 
 | Instrument | Name (canonical) |
 | ---------- | ---------------- |
@@ -160,6 +160,8 @@ twine check dist/*
 ```
 
 **Publish on PyPI:** Workflow [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) runs on **`vMAJOR.MINOR.PATCH`** tags (for example **`v0.2.0`**). It builds with **`python -m build`** and uploads using **`pypa/gh-action-pypi-publish`** with **OIDC**; the default path does **not** use a long-lived **`PYPI_API_TOKEN`** repository secret. First-time maintainers register the GitHub repo and workflow in the PyPI project’s **trusted publisher** settings; see [PyPI trusted publishers](https://docs.pypi.org/trusted-publishers/).
+
+**GitHub milestones:** This repository does not use GitHub Milestones (or Projects) for release buckets; **[docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) §9.3** is **N/A** here unless that policy changes.
 
 ## Security considerations
 
