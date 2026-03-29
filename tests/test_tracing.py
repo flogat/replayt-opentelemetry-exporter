@@ -410,7 +410,7 @@ def test_workflow_run_span_merges_extra_attributes() -> None:
     assert spans[0].attributes["custom.dim"] == "us-east-1"
 
 
-# TESTING_SPEC §4.7 + SECURITY_REDACTION.md Optional span attributes — redaction matrices below.
+# SECURITY_REDACTION.md + PUBLIC_API_SPEC §6 — optional span attributes; redaction matrices below.
 
 
 @pytest.mark.parametrize(
@@ -418,7 +418,7 @@ def test_workflow_run_span_merges_extra_attributes() -> None:
     sorted(tracing_mod._EXACT_BLOCKED_ATTRIBUTE_KEYS),
 )
 def test_workflow_run_span_omits_exact_blocked_attribute_keys(blocked_key: str) -> None:
-    """TESTING_SPEC §4.7; SECURITY_REDACTION.md optional span attrs — exact blocked-key matrix."""
+    """SECURITY_REDACTION.md; PUBLIC_API_SPEC §6 — optional span attrs, exact blocked-key matrix."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(
         tracer,
@@ -447,7 +447,7 @@ def test_workflow_run_span_omits_exact_blocked_attribute_keys(blocked_key: str) 
 def test_workflow_run_span_omits_blocked_keys_substring_suffix_and_case(
     blocked_key: str,
 ) -> None:
-    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — substring, _token/_secret suffix, lowercasing."""
+    """SECURITY_REDACTION.md; PUBLIC_API_SPEC §6 — substring, _token/_secret suffix, lowercasing."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(
         tracer,
@@ -473,7 +473,7 @@ def test_workflow_run_span_omits_blocked_keys_substring_suffix_and_case(
 def test_workflow_run_span_truncates_optional_attributes_at_100_codepoints(
     raw_len: int, expected_len: int
 ) -> None:
-    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — 100 code-point cap, no ellipsis on attrs."""
+    """SECURITY_REDACTION.md; PUBLIC_API_SPEC §6 — 100 code-point cap, no ellipsis on attrs."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     payload = "x" * raw_len
     with workflow_run_span(tracer, "wf-123", attributes={"note": payload}):
@@ -518,7 +518,7 @@ def test_workflow_run_span_reserved_keys_in_attributes_do_not_override(
     run_id: str | None,
     extra_attrs: dict[str, str],
 ) -> None:
-    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — reserved workflow/run id keys not overridden."""
+    """SECURITY_REDACTION.md; PUBLIC_API_SPEC §6 — reserved workflow/run id keys not overridden."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(
         tracer,
@@ -820,6 +820,123 @@ def test_generate_run_summary_with_error() -> None:
     assert summary.error_message is not None
     assert len(summary.error_message) == 103
     assert summary.error_message.endswith("...")
+
+
+@pytest.mark.parametrize(
+    ("success", "expected_outcome"),
+    [(True, "success"), (False, "failure")],
+)
+def test_record_run_outcome_metrics_without_workflow_run_span(
+    success: bool,
+    expected_outcome: str,
+) -> None:
+    """TESTING_SPEC §4.7; PUBLIC_API_SPEC §3.5, §5.5.3 — §5 labels without workflow_run_span."""
+    reader = InMemoryMetricReader()
+    provider = build_meter_provider(metric_readers=[reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(provider)
+        workflow_id = "wf-advanced-metrics"
+        run_id = "run-adv-1"
+        duration_ms = 10.0
+        record_run_outcome(
+            success,
+            workflow_id,
+            run_id=run_id,
+            duration_ms=duration_ms,
+        )
+        reader.collect()
+        metrics_data = reader.get_metrics_data()
+
+        found_counter = False
+        found_hist = False
+        for rm in metrics_data.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.workflow.run.outcomes_total":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("outcome") == expected_outcome:
+                                assert dp.attributes.get("workflow_id") == workflow_id
+                                assert dp.attributes.get("run_id") == run_id
+                                assert dp.value == 1
+                                found_counter = True
+                    if metric.name == "replayt.workflow.run.duration_ms":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("outcome") == expected_outcome:
+                                assert dp.attributes.get("workflow_id") == workflow_id
+                                assert dp.attributes.get("run_id") == run_id
+                                assert dp.count > 0
+                                found_hist = True
+        assert found_counter
+        assert found_hist
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_record_run_outcome_paired_with_generate_run_summary_integrator_span() -> None:
+    """TESTING_SPEC §4.7; PUBLIC_API_SPEC §3.5, §5.5.2 — pairing on an integrator-owned span."""
+    tracer, span_exporter, trace_provider = _workflow_tracer_from_memory_exporter()
+    metric_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(metric_readers=[metric_reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        workflow_id = "wf-pair-summary"
+        run_id = "run-pair-summary"
+        with tracer.start_as_current_span("integrator.owned.run") as span:
+            span.set_attribute("replayt.workflow.id", workflow_id)
+            span.set_attribute("replayt.run.id", run_id)
+
+        assert span.end_time is not None
+        elapsed_ns = span.end_time - span.start_time
+        duration_ms = elapsed_ns / 1e6
+
+        record_run_outcome(
+            success=True,
+            workflow_id=workflow_id,
+            run_id=run_id,
+            duration_ms=duration_ms,
+        )
+
+        summary = generate_run_summary(
+            span=span,
+            workflow_id=workflow_id,
+            run_id=run_id,
+            outcome="success",
+            high_level_steps=["dispatch", "finish"],
+        )
+
+        assert summary.workflow_id == workflow_id
+        assert summary.run_id == run_id
+        assert summary.outcome == "success"
+        assert summary.high_level_steps == ["dispatch", "finish"]
+        assert summary.duration_ms == int(elapsed_ns / 1e6)
+        datetime.fromisoformat(summary.start_time)
+        datetime.fromisoformat(summary.end_time)
+
+        metric_reader.collect()
+        metrics_data = metric_reader.get_metrics_data()
+        found_counter = False
+        for rm in metrics_data.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.workflow.run.outcomes_total":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("outcome") == "success":
+                                assert dp.attributes.get("workflow_id") == workflow_id
+                                assert dp.attributes.get("run_id") == run_id
+                                assert dp.value == 1
+                                found_counter = True
+        assert found_counter
+
+        trace_provider.force_flush()
+        finished = span_exporter.get_finished_spans()
+        assert len(finished) == 1
+        event_names = [e.name for e in finished[0].events]
+        assert "replayt.workflow.run.started" not in event_names
+        assert "replayt.workflow.run.completed" not in event_names
+    finally:
+        metrics.set_meter_provider(previous_meter)
 
 
 def test_run_summary_dataclass_to_dict() -> None:
