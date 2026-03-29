@@ -55,6 +55,15 @@ The backlog item *Add CI with ruff, tests, and readable logs* is satisfied for *
 
 Implementing or adjusting workflow YAML is **Builder** work; [CI_SPEC.md](CI_SPEC.md) **§5** is the checklist.
 
+The backlog item *Document operator dashboards for canonical metrics* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Operator-facing runbook maps §5 metrics to PromQL/Grafana/alert guidance without reading `tracing.py` | [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) **§3–§7**; delivered as **`docs/OPERATOR_RUNBOOK.md`** (or README equivalent per that spec) |
+| Label semantics and cardinality match the public API | [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) **§2**, **§4**; normative source **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §5–§6** |
+
+Authoring **`docs/OPERATOR_RUNBOOK.md`** and README links is **Builder** work; this §1.1 row is the documentation contract.
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -334,6 +343,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 6. **Tests** — Pytest passes without merge artifacts; obligations in **[TESTING_SPEC.md](TESTING_SPEC.md)** **§4–§5** are met (success path, failure path, exporter-error path, fakes/determinism, replayt public surface only). Span attributes, lifecycle events/attributes per §6, success/failure metrics, `__all__` parity, and provider installation remain covered as today’s `tests/test_tracing.py` / `tests/test_pyproject_dependencies.py` demonstrate—extend or split modules when scenarios grow.
 7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 8. **CI readability** — [CI_SPEC.md](CI_SPEC.md) **§5** is satisfied: Ruff lint, Ruff format check, and pytest run in separately identifiable steps; failures surface the failing tool; exit codes are not masked; logs follow **§3.3–§3.4**; README satisfies **§3.5**.
+9. **Operator monitoring** — [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) is satisfied: **`docs/OPERATOR_RUNBOOK.md`** exists (or README carries equivalent depth per that spec), links from README **Metrics** / **Operator monitoring**, and contains the §4–§7 content obligations (PromQL examples, Grafana panel intent, alert starting points) aligned with §5–§6.
 
 ## 9. Related documents
 
@@ -343,3 +353,4 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest CI steps, failure surfacing, safe logs.
 - [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) — `RunSummary` / `generate_run_summary`.
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
+- [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).

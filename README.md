@@ -134,6 +134,12 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 - Prefer stable **workflow** and **run** identifiers that are safe to emit.
 - Keep labels **low-cardinality**; do not put unbounded or secret-bearing values on metrics. See [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md).
 
+### Operator monitoring (dashboards and alerts)
+
+**[docs/OPERATOR_RUNBOOK.md](docs/OPERATOR_RUNBOOK.md)** — PromQL-style examples, Grafana panel intents, and alert starting points for the §5 metrics, aligned with [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5–§6** (label semantics and cardinality). Confirm metric and label names on your OTLP → Prometheus (or vendor) pipeline before copying queries verbatim.
+
+Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](docs/OPERATOR_MONITORING_SPEC.md)**.
+
 ## Security considerations
 
 - **Transport and endpoints** — In production, point OTLP at an **HTTPS** collector URL (for example via `OTEL_EXPORTER_OTLP_ENDPOINT`). Plain HTTP is only appropriate on trusted local networks. Follow your OpenTelemetry distro's docs for TLS, mTLS, and proxies.
@@ -158,6 +164,8 @@ team's tooling.
 | `docs/COMPATIBILITY_MATRIX_SPEC.md` | Compatibility matrix, dependency pin justification, CI validation policy |
 | `docs/TESTING_SPEC.md` | Pytest strategy, replayt boundary and exporter-error test obligations |
 | `docs/CI_SPEC.md` | CI step naming, Ruff + pytest commands, exit codes, safe logs |
+| `docs/OPERATOR_MONITORING_SPEC.md` | Operator dashboards/alerts spec for §5 metrics |
+| `docs/OPERATOR_RUNBOOK.md` | Operator PromQL/Grafana/alert guidance for canonical metrics |
 | `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present) |
 | `src/replayt_opentelemetry_exporter/` | Python package (import `replayt_opentelemetry_exporter`) |
 | `tests/` | Pytest suite |
