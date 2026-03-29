@@ -48,6 +48,16 @@ On failure, the span’s **status description** is the exception’s **type name
 
 Extra string attributes passed as `workflow_run_span(..., attributes={...})` are filtered in code: keys that match the **Never emit** patterns (for example `api_key`, names ending in `_token`, or containing `password`) are dropped; remaining string values longer than **100** characters are truncated. Canonical keys `replayt.workflow.id` and `replayt.run.id` come only from the `workflow_id` and `run_id` parameters so callers cannot override them via `attributes`.
 
+## Exporter health metric (`replayt.exporter.errors_total`)
+
+The counter **`replayt.exporter.errors_total`** (and any **§5.5.1** automatic hooks that feed it) MUST follow [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5.3**–**§5.4**:
+
+- **Labels** — Only documented, low-cardinality keys (e.g. **`error_type`** with values **`export_failed`**, **`serialization_error`**, **`timeout`**, **`unknown`** after normalization). Do **not** put raw exception messages, stack traces, exporter endpoints, response bodies, or other unbounded or secret-bearing strings into metric attributes.
+- **Optional context** — If **`workflow_id`** or **`run_id`** appear on this counter, they MUST obey the same cardinality discipline as elsewhere (**Safe to emit** when they are stable logical identifiers, not arbitrary user input).
+- **Logging** — Debug logs that mention the original caller-supplied string before coercion to **`unknown`** MUST avoid echoing secrets or large payloads; prefer type names or short, fixed patterns.
+
+This applies equally to **`record_exporter_error`** and to automatic **BatchSpanProcessor** / metric-reader failure hooks described in **§5.5.1**.
+
 ## OpenTelemetry Semantic Conventions
 
 When emitting attributes, follow OpenTelemetry semantic conventions where applicable:
