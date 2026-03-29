@@ -36,12 +36,12 @@ Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 
 | Component | Supported range (see `pyproject.toml`) | CI / validation |
 | --------- | -------------------------------------- | ---------------- |
-| Python | `>=3.11` (`requires-python`) | Python **3.12** only in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) job **`test`** (see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4**) |
+| Python | `>=3.11` (`requires-python`) | **3.12:** job **`test`**, full replayt×OpenTelemetry matrix (merge gate). **3.11:** job **`test-python-3-11`** in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (`schedule` + `workflow_dispatch` only; same Ruff/pytest commands)—[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3**, [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**. |
 | OpenTelemetry API / SDK | `>=1.20.0,<2` each | `test` **strategy.matrix**: pins **1.20.0** and **1.40.0** (each cell reinstalls API + SDK to the same version); **Print resolved dependency versions** logs `replayt`, `opentelemetry-api`, `opentelemetry-sdk` |
 | replayt | `>=0.4.0` (no upper cap yet—see [COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§3**) | Same matrix: **0.4.0** and PyPI **latest** (`pip install --upgrade --force-reinstall replayt`) |
 | OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http>=1.20.0,<2` | Same OpenTelemetry major as API/SDK; install locally with `pip install -e ".[dev,otlp]"` and match a matrix cell if you need parity |
 
-Matrix updates are validated by that workflow: every push runs **Ruff** and **pytest** once per cell. Approximate a cell locally with `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), then `pytest` from the repo root after `pip install -e ".[dev]"`.
+Matrix updates are validated by that workflow: every push runs **Ruff** and **pytest** once per cell on **3.12**. Job **`test-python-3-11`** runs the same Ruff and pytest commands for one documented pin set (**replayt** latest, OpenTelemetry API/SDK **1.40.0**) on **`schedule`** and **`workflow_dispatch`** only (not on every PR unless branch protection is changed to require it)—see [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3**. Approximate a cell locally with `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), then `pytest` from the repo root after `pip install -e ".[dev]"`.
 
 ## Design principles
 
@@ -81,7 +81,7 @@ python -m ruff format --check src tests
 
 **CI entry point:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — job **`test`** runs the Ruff and pytest commands above (after matrix pins) in **separate steps** so the Actions UI shows whether lint, format, or tests failed; see **[docs/CI_SPEC.md](docs/CI_SPEC.md)** for the full contract.
 
-CI runs those checks on Python 3.12 (job **`test`**). Each matrix cell reinstalls pinned **replayt** and OpenTelemetry API/SDK versions, then logs all three distributions before Ruff and pytest.
+CI runs those checks on Python **3.12** (job **`test`**). Each matrix cell reinstalls pinned **replayt** and OpenTelemetry API/SDK versions, then logs all three distributions before Ruff and pytest. Job **`test-python-3-11`** runs the same steps for **replayt** latest and OpenTelemetry **1.40.0** on Python **3.11** when the workflow is triggered by **`schedule`** or **`workflow_dispatch`** (informational unless you mark it required in branch protection); see [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3** and [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**.
 
 ## Enable tracing and metrics in development
 

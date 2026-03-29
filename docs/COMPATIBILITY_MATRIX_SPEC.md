@@ -73,7 +73,7 @@ If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-prot
 
 ### 4.1 Implemented matrix (current)
 
-**[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline. **How** those checks are split into steps, named, and logged is specified in **[CI_SPEC.md](CI_SPEC.md)**.
+**[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline. **How** those checks are split into steps, named, and logged is specified in **[CI_SPEC.md](CI_SPEC.md)**. This job is the **default PR merge gate** for replayt×OpenTelemetry coverage; supplemental **Python 3.11** validation is **§4.3** (not a fourth matrix dimension on **3.12**).
 
 ### 4.2 Target state (Builder obligation) — satisfied for OpenTelemetry 1.x
 
@@ -85,11 +85,26 @@ The backlog automation obligations for the **1.x** line are met when items **1�
 2. Each matrix job **logs** resolved versions for `replayt`, `opentelemetry-api`, and `opentelemetry-sdk` (for example via `importlib.metadata.version`) so logs are auditable.
 3. **README** and this document **name the workflow file** and the job id(s) that implement the matrix, and summarize what dimensions are covered (e.g. “replayt 0.4.x min + latest; OTel 1.20.x + 1.x latest”).
 
-Python version dimension: if `[project].requires-python` allows multiple minors, policy SHOULD state whether CI matrices multiple Python versions or only documents one; today CI uses **3.12** only—any expansion MUST be documented here and in README.
+Python version dimension: **`requires-python`** is **`>=3.11`**; **merge-blocking** CI runs the full replayt×OpenTelemetry matrix on **3.12** only (**§4.1**). **Python 3.11** is validated by a **supplemental** job per **§4.3** and **[CI_SPEC.md](CI_SPEC.md) §3.6** (scheduled / manual dispatch at minimum; optional PR triggers if documented as required or informational). Expanding **3.11** to a **full** four-cell matrix on every PR is **discouraged** unless maintainers update this section and README with explicit cost/rationale.
 
 **OpenTelemetry 2.x:** Do **not** add CI matrix cells for 2.x until **§7** is satisfied (spike validated, bounds justified, docs and optional extras aligned). Until then, the matrix exercises **1.x** pins only.
 
-### 4.3 Local reproduction
+### 4.3 Python 3.11 supplemental validation (Builder obligation)
+
+Because the package declares **`requires-python >=3.11`**, maintainers MUST exercise **3.11** in CI **without** multiplying the **§4.1** matrix on every pull request:
+
+| Obligation | Normative detail |
+| ---------- | ---------------- |
+| **Location** | Same **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** file (additional job) **or** a dedicated workflow file; README and **§2** matrix **CI / validation** column MUST name the job id and file path. |
+| **Python** | **3.11** (exact patch is the runner default for `3.11` unless pinned explicitly elsewhere). |
+| **Dependency pins** | **One** representative cell after editable install: **replayt** **latest** (same reinstall pattern as **`test`**’s `latest` cell), **OpenTelemetry** API/SDK **1.40.0** (or the **current** documented “upper” 1.x pin used in **`test`**, if that changes—keep this sentence aligned with **§4.1**). |
+| **Commands** | Same Ruff and pytest invocations as **[CI_SPEC.md](CI_SPEC.md) §3.1** for **`test`** (`ruff check src tests`, `ruff format --check src tests`, `pytest -q`). |
+| **Triggers** | At minimum **`schedule`** and **`workflow_dispatch`**. **`pull_request`** / **`push`** are optional; if added, README MUST state whether the check is **required for merge** or **informational** (e.g. not a branch-protection required check). |
+| **Logging** | Encouraged: same three-distribution resolved-version print as **`test`** for auditability. |
+
+To approximate the **§4.3** **3.11** smoke locally, use Python **3.11**, `pip install -e ".[dev]"`, apply the **§4.3** pin pair, then run the same Ruff and pytest commands as README / **[CI_SPEC.md](CI_SPEC.md) §3.1**.
+
+### 4.4 Local reproduction
 
 Contributors MUST be able to approximate a matrix cell locally, e.g. `pip install "replayt==…" "opentelemetry-api==…" "opentelemetry-sdk==…"` then `pytest`. README **Running tests** MAY add one sentence pointing to this section.
 
@@ -101,6 +116,8 @@ Maintainers MAY append dated rows when changing bounds:
 | ---- | ------ | --------- | ------------ |
 | 2026-03-28 | `replayt` lower bound `>=0.4.0`; OTel API/SDK OTLP extra `>=1.20.0,<2` | Tests and `tracing.py` map `RunFailed`, `ContextSchemaError`, and related replayt types; cap OTel below 2 until a validated major bump | `.github/workflows/ci.yml` `test` matrix cells + [CHANGELOG.md](../CHANGELOG.md) **Unreleased** |
 | 2026-03-29 | OpenTelemetry **2.x** explicit exclusion (unchanged `<2` cap) | PyPI had no `opentelemetry-api` / `opentelemetry-sdk` **2.x** (stable or `--pre`) at Builder audit; **§7.2** install blocked per step **0**; support deferred until published **2.x** and full spike | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** audit paragraph; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4** |
+| 2026-03-29 | Python **3.11** supplemental CI policy | `requires-python >=3.11` needs a non-PR-blocking smoke path; full replayt×OTel matrix stays on **3.12**; **3.11** smoke per **[CI_SPEC.md](CI_SPEC.md) §3.6** and **§4.3** here | Spec + Builder (*Expand CI matrix with optional Python 3.11 job*); README **Version compatibility** |
+| 2026-03-29 | Job **`test-python-3-11`** in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | **§4.3** cell: **replayt** latest, OpenTelemetry API/SDK **1.40.0**, Python **3.11**; triggers **`schedule`** (weekly) and **`workflow_dispatch`** only (`if` on the job); same Ruff/pytest as **`test`** | Phase **3** builder (*Expand CI matrix with optional Python 3.11 job*); `tests/test_ci_workflow.py` |
 
 ## 6. Acceptance criteria summary
 
@@ -108,7 +125,9 @@ Maintainers MAY append dated rows when changing bounds:
 | ----- | --------- |
 | **Spec (phase 2)** — *Add compatibility matrix and dependency pins* | This document exists; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7 and README link here; backlog mapping appears in PUBLIC_API_SPEC §1.1; CHANGELOG **Unreleased** notes the spec. |
 | **Spec (phase 2)** — *Validate OpenTelemetry 2.x and document policy* | **§7** (spike, documentation outcomes, CI gating); **§3.3** and **§4** reference **§7** where relevant; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps the backlog and **§7.4** states integrator-facing **1.x** / **2.x** policy; CHANGELOG **Unreleased** notes the spec pass. |
+| **Spec (phase 2)** — *Expand CI matrix with optional Python 3.11 job* | **§4.1** / **§4.2** / **§4.3** state merge-blocking **3.12** matrix vs supplemental **3.11**; [CI_SPEC.md](CI_SPEC.md) **§2.2** and **§3.6**; README **Version compatibility**; CHANGELOG **Unreleased** notes the spec pass where applicable. |
 | **Builder (phase 3+)** — matrix / pins backlog | Matrix table populated per **§2**; `pyproject.toml` bounds match table; justifications per **§3**; CI matrix per **§4.2**; CHANGELOG records dependency-facing changes. |
+| **Builder (phase 3+)** — *Expand CI matrix with optional Python 3.11 job* | Supplemental **3.11** job per **§4.3** and [CI_SPEC.md](CI_SPEC.md) **§5** items **6–7**; README **CI / validation** column; **`tests/test_ci_workflow.py`** updated for YAML contract; CHANGELOG **Unreleased** when behavior ships. |
 | **Builder (phase 3+)** — *OpenTelemetry 2.x* | **§7.5** Builder row. |
 
 ## 7. OpenTelemetry 2.x validation, policy, and CI gating
