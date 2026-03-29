@@ -13,12 +13,18 @@ from opentelemetry.metrics import Counter, Histogram, MeterProvider
 from opentelemetry.sdk.metrics import MeterProvider as SdkMeterProvider
 from opentelemetry.sdk.metrics.export import (
     MetricExporter,
+    MetricExportResult,
     MetricReader,
+    MetricsData,
     PeriodicExportingMetricReader,
 )
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry.sdk.trace.export import (
+    BatchSpanProcessor,
+    SpanExporter,
+    SpanExportResult,
+)
 from opentelemetry.trace import Span, Tracer
 from replayt import ContextSchemaError, LogLockError, ReplaytError, RunFailed
 
@@ -82,6 +88,93 @@ def _package_version() -> str:
         return "unknown"
 
 
+def _exception_to_exporter_error_type(exc: BaseException) -> str:
+    """Map export-path exceptions to PUBLIC_API_SPEC §5.3 ``error_type`` values."""
+    if isinstance(exc, TimeoutError):
+        return "timeout"
+    if isinstance(exc, (ConnectionError, BrokenPipeError)):
+        return "export_failed"
+    if isinstance(exc, OSError):
+        return "export_failed"
+    if isinstance(exc, (UnicodeEncodeError, UnicodeDecodeError)):
+        return "serialization_error"
+    cls_name = type(exc).__name__
+    if cls_name in ("JSONEncodeError", "JSONDecodeError"):
+        return "serialization_error"
+    return "unknown"
+
+
+def _record_export_failure_metric(
+    *,
+    exc: BaseException | None,
+    returned_failure_without_exception: bool,
+) -> None:
+    """Increment ``replayt.exporter.errors_total`` for automatic hooks (§5.5.1)."""
+    if exc is not None:
+        record_exporter_error(_exception_to_exporter_error_type(exc))
+    elif returned_failure_without_exception:
+        record_exporter_error("export_failed")
+
+
+class _ObservingSpanExporter(SpanExporter):
+    """Delegates to an inner exporter and records §5.5.1 metrics on failure."""
+
+    __slots__ = ("_inner",)
+
+    def __init__(self, inner: SpanExporter) -> None:
+        self._inner = inner
+
+    def export(self, spans):  # type: ignore[no-untyped-def]
+        try:
+            result = self._inner.export(spans)
+        except BaseException as exc:
+            _record_export_failure_metric(exc=exc, returned_failure_without_exception=False)
+            raise
+        if result is SpanExportResult.FAILURE:
+            _record_export_failure_metric(exc=None, returned_failure_without_exception=True)
+        return result
+
+    def shutdown(self) -> None:
+        self._inner.shutdown()
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return self._inner.force_flush(timeout_millis)
+
+
+class _ObservingMetricExporter(MetricExporter):
+    """Delegates to an inner exporter and records §5.5.1 metrics on failure."""
+
+    __slots__ = ("_inner",)
+
+    def __init__(self, inner: MetricExporter) -> None:
+        super().__init__(
+            preferred_temporality=inner._preferred_temporality,
+            preferred_aggregation=inner._preferred_aggregation,
+        )
+        self._inner = inner
+
+    def export(
+        self,
+        metrics_data: MetricsData,
+        timeout_millis: float = 10_000,
+        **kwargs,
+    ) -> MetricExportResult:
+        try:
+            result = self._inner.export(metrics_data, timeout_millis=timeout_millis, **kwargs)
+        except BaseException as exc:
+            _record_export_failure_metric(exc=exc, returned_failure_without_exception=False)
+            raise
+        if result is MetricExportResult.FAILURE:
+            _record_export_failure_metric(exc=None, returned_failure_without_exception=True)
+        return result
+
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
+        self._inner.shutdown(timeout_millis=timeout_millis, **kwargs)
+
+    def force_flush(self, timeout_millis: float = 10_000) -> bool:
+        return self._inner.force_flush(timeout_millis=timeout_millis)
+
+
 def build_resource(
     *,
     service_name: str = "replayt",
@@ -101,12 +194,18 @@ def build_tracer_provider(
     resource: Resource | None = None,
     span_exporters: Sequence[SpanExporter] | None = None,
     service_name: str = "replayt",
+    record_exporter_errors_on_export_failure: bool = False,
 ) -> TracerProvider:
     resource = resource or build_resource(service_name=service_name)
     tracer_provider = TracerProvider(resource=resource)
     if span_exporters:
         for exporter in span_exporters:
-            processor = BatchSpanProcessor(exporter)
+            wrapped = (
+                _ObservingSpanExporter(exporter)
+                if record_exporter_errors_on_export_failure
+                else exporter
+            )
+            processor = BatchSpanProcessor(wrapped)
             tracer_provider.add_span_processor(processor)
     return tracer_provider
 
@@ -117,13 +216,23 @@ def build_meter_provider(
     metric_exporters: Sequence[MetricExporter] | None = None,
     metric_readers: Sequence[MetricReader] | None = None,
     service_name: str = "replayt",
+    record_exporter_errors_on_export_failure: bool = False,
+    metric_export_interval_millis: float | None = None,
 ) -> MeterProvider:
     global _run_counter, _error_counter, _duration_histogram
     resource = resource or build_resource(service_name=service_name)
     readers: list[MetricReader] = []
     if metric_exporters:
+        pemr_kwargs: dict[str, float] = {}
+        if metric_export_interval_millis is not None:
+            pemr_kwargs["export_interval_millis"] = metric_export_interval_millis
         for exporter in metric_exporters:
-            readers.append(PeriodicExportingMetricReader(exporter))
+            wrapped = (
+                _ObservingMetricExporter(exporter)
+                if record_exporter_errors_on_export_failure
+                else exporter
+            )
+            readers.append(PeriodicExportingMetricReader(wrapped, **pemr_kwargs))
     if metric_readers:
         readers.extend(metric_readers)
     meter_provider = SdkMeterProvider(resource=resource, metric_readers=readers)
@@ -153,11 +262,13 @@ def install_tracer_provider(
     resource: Resource | None = None,
     span_exporters: Sequence[SpanExporter] | None = None,
     service_name: str = "replayt",
+    record_exporter_errors_on_export_failure: bool = False,
 ) -> TracerProvider:
     tracer_provider = build_tracer_provider(
         resource=resource,
         span_exporters=span_exporters,
         service_name=service_name,
+        record_exporter_errors_on_export_failure=record_exporter_errors_on_export_failure,
     )
     trace.set_tracer_provider(tracer_provider)
     return tracer_provider
@@ -169,12 +280,16 @@ def install_meter_provider(
     metric_exporters: Sequence[MetricExporter] | None = None,
     metric_readers: Sequence[MetricReader] | None = None,
     service_name: str = "replayt",
+    record_exporter_errors_on_export_failure: bool = False,
+    metric_export_interval_millis: float | None = None,
 ) -> MeterProvider:
     meter_provider = build_meter_provider(
         resource=resource,
         metric_exporters=metric_exporters,
         metric_readers=metric_readers,
         service_name=service_name,
+        record_exporter_errors_on_export_failure=record_exporter_errors_on_export_failure,
+        metric_export_interval_millis=metric_export_interval_millis,
     )
     metrics.set_meter_provider(meter_provider)
     return meter_provider

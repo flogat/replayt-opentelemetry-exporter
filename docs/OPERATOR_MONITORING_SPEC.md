@@ -100,7 +100,7 @@ If the runbook targets a backend that does not expose Prometheus histogram bucke
 
 ### 4.3 `replayt.exporter.errors_total` (Counter)
 
-**Purpose:** Export-path health ([PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5**, **§5.3** `error_type`).
+**Purpose:** Export-path health ([PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5**, **§5.3** `error_type`). Integrators MAY record failures manually via `record_exporter_error` or, when explicitly enabled, via the optional **§5.5.1** processor/reader hooks—the **same** instrument and **`error_type`** semantics apply so dashboards and alerts stay valid.
 
 **Minimum documentation:**
 

@@ -180,6 +180,12 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 
 `error_type` SHOULD be one of `export_failed`, `serialization_error`, `timeout`, or `unknown` (see [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5.3). Other strings are recorded as `unknown`.
 
+### Automatic exporter errors (optional)
+
+You can pass **`record_exporter_errors_on_export_failure=False`** (the default) on **`build_tracer_provider`**, **`install_tracer_provider`**, **`build_meter_provider`**, and **`install_meter_provider`**. Set it to **`True`** so failed span or metric exports increment **`replayt.exporter.errors_total`** through the same path as **`record_exporter_error`** ([PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.5.1**). Build or install the **meter** provider first so those instruments exist. If your own exporter or wrapper already calls **`record_exporter_error`**, keep this flag off for that pipeline or expect **duplicate** counts on failures (same table in **§5.5.1**).
+
+For **`build_meter_provider`** / **`install_meter_provider`**, optional **`metric_export_interval_millis`** is forwarded to **`PeriodicExportingMetricReader`** (OpenTelemetry default when omitted). Tests sometimes set **`float("inf")`** so the reader does not start a background export thread.
+
 - Prefer stable **workflow** and **run** identifiers that are safe to emit.
 - Keep labels **low-cardinality**; do not put unbounded or secret-bearing values on metrics. See [docs/SECURITY_REDACTION.md](docs/SECURITY_REDACTION.md).
 
