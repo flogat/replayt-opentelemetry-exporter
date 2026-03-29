@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Phase **2** spec (*Add optional `[otlp-grpc]` extra and README example for gRPC exporters*): [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§3.4** defines **`[otlp-grpc]`** pins (mirror **`[otlp]`**), README obligations (gRPC **`install_*_provider`** example, OTLP env vars, HTTP vs gRPC / LB / mTLS guidance), and optional CI; [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§1.1**, **§7.3** snapshot, **§7.4**, **§8** item **18**; [docs/CI_SPEC.md](docs/CI_SPEC.md) **§2.3**; [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§4.6**. Implementation is **Builder** phase **3**.
+
 ### Added
 - Phase **3** builder (*Ship first PyPI release and document version / upgrade policy*): **`tests/test_pypi_index.py`** opt-in check (**`VERIFY_PYPI_INDEX=1`**) that **`replayt-opentelemetry-exporter`** on PyPI matches **`[project].version`** in **`pyproject.toml`** ([docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§8** item **17**); README **Releases and PyPI** documents the command.
 
