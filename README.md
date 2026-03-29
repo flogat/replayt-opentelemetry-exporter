@@ -29,7 +29,7 @@ These symbols are the intended stable exports (see the spec for parameters and s
 
 ## Version compatibility
 
-**Normative policy** (matrix shape, justified pins, how CI should validate): **[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md)**. That spec maps the backlog *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* to testable Builder obligations.
+**Normative policy** (matrix shape, justified pins, how CI should validate): **[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md)**. That spec maps the backlog *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* to testable Builder obligations. **OpenTelemetry 2.x** is **not** a supported line while `pyproject.toml` caps API/SDK **below 2**; spike workflow, documentation outcomes, and when CI may add **2.x** matrix cells are specified in that document **§7** and summarized for integrators in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.4**.
 
 Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 

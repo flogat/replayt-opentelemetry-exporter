@@ -27,6 +27,16 @@ The backlog item *Add compatibility matrix and dependency pins for replayt and O
 
 Full automation (CI matrix) is specified in **COMPATIBILITY_MATRIX_SPEC.md §4**; implementing it is **Builder** work, not Spec-only.
 
+The backlog item *Validate OpenTelemetry 2.x and document policy* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Current **1.x** bounds and **2.x** cap (or post-validation range) are stated for integrators | **§7.1**, **§7.3** (snapshot table), **§7.4** |
+| Spike workflow, documentation outcomes for **support vs exclusion**, and **CI matrix gating** for **2.x** | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** |
+| README and compatibility matrix stay consistent when bounds change | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§2**–**§3**; README **Version compatibility** |
+
+Implementing the spike, widening `pyproject.toml`, extending **`.github/workflows/ci.yml`**, and adjusting **`tests/test_pyproject_dependencies.py`** are **Builder** work; **§8** item **12** is the implementation checklist.
+
 The backlog item *Emit traces for replayt workflow run lifecycle with human-readable status* is satisfied for documentation when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -354,7 +364,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 ### 7.1 Declared in `pyproject.toml` (normative ranges)
 
 - **Python:** `requires-python` as specified in `[project]` (currently `>=3.11`).
-- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` as in `[project.dependencies]` (currently `>=1.20.0,<2`). Integrators MAY use newer 1.x minors within that range; a 2.x line requires a documented matrix and CHANGELOG entry before bounds widen.
+- **OpenTelemetry:** `opentelemetry-api` and `opentelemetry-sdk` as in `[project.dependencies]` (currently `>=1.20.0,<2`). Integrators MAY use newer 1.x minors within that range. **OpenTelemetry Python 2.x** is **not supported** while the **`<2`** cap remains; adopting **2.x** is **Builder** work gated by [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7**—see **§7.4**.
 - **replayt:** Lower bound as in `[project.dependencies]` (currently `>=0.4.0`). Upper bounds or caps MAY be added for known breakages.
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
@@ -371,12 +381,18 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
 | Python | `requires-python` (currently `>=3.11`) | CI matrices may test a subset. |
-| OpenTelemetry API/SDK | `>=1.20.0,<2` | Stay on 1.x until bounds and matrix explicitly cover 2.x. |
+| OpenTelemetry API/SDK | `>=1.20.0,<2` | **1.x** supported within range; **2.x** **unsupported** until **§7.4** / [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** complete (spike, docs, matrix). |
 | replayt | `>=0.4.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
 | Tested replayt (CI) | Matrix cells **0.4.0** and **latest** | See [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. |
 | Reference replayt (examples) | **0.4.25** (baseline log) | Update when README claims a different line. |
 
-### 7.4 TODO allowed
+### 7.4 OpenTelemetry 2.x policy (normative)
+
+- **While `pyproject.toml` declares `<2`:** This package **does not** support installing alongside **OpenTelemetry Python API/SDK 2.x**. Integrators MUST stay on **1.x** versions that satisfy the declared lower bound.
+- **To support 2.x:** Maintainers follow [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7**—spike on a branch, then either widen bounds and expand CI per that section **or** document an explicit continued exclusion with rationale.
+- **Optional OTLP extra:** Any **2.x** support claim MUST include aligned bounds for `opentelemetry-exporter-otlp-proto-http` (same major line as API/SDK); see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4** and **§7.1**.
+
+### 7.5 TODO allowed
 
 - Exact **upper** bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md), here, or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) until validated—provided **§3** of that document still records rationale for existing lower bounds.
 
@@ -395,6 +411,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 9. **Operator monitoring** — [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) is satisfied: **`docs/OPERATOR_RUNBOOK.md`** exists (or README carries equivalent depth per that spec), links from README **Metrics** / **Operator monitoring**, and contains the §4–§7 content obligations (PromQL examples, Grafana panel intent, alert starting points) aligned with §5–§6.
 10. **Replayt reference docs** — [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) is satisfied: **`docs/reference-documentation/README.md`** indexes version-stamped snapshots for **Workflow**, **Runner**, **RunContext**, and **run_with_mock** per matrix replayt pins; README and **REPLAYT_ECOSYSTEM_IDEA.md** link per that spec **§5**.
 11. **Runner-based integration example** — **§3.4** is satisfied: **`docs/examples/runner_workflow_run_span.md`** exists, meets **§2.2.1** / **§3.4** content and public-API rules, has **§3.4** runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**, and README links to the markdown as required there.
+12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: spike per **§7.2**; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, **§7.4** here and README accurate); if **support**: CI matrix includes **§7.4** requirements and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** pins align with API/SDK.
 
 ## 9. Related documents
 
@@ -406,3 +423,4 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
+- [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).

@@ -63,7 +63,7 @@ Rationale examples: “minimum replayt version that exposes `RunContext` used in
 ### 3.3 Upper bounds policy
 
 - **replayt:** Upper bounds are **allowed and encouraged** once a breaking replayt release is known or to narrow the support claim to tested lines. Until then, a lower bound only is acceptable if README and this spec **explicitly** state that **latest satisfying the lower bound** is what CI exercises (current single-job behavior).
-- **OpenTelemetry:** Stay on a **single supported major** per release unless CHANGELOG documents a major bump and matrix coverage. Upper caps (e.g. `<2`) MAY be used to avoid surprise major upgrades before validation.
+- **OpenTelemetry:** Stay on a **single supported major** per release unless CHANGELOG documents a major bump and matrix coverage. Upper caps (e.g. `<2`) MAY be used to avoid surprise major upgrades before validation. **OpenTelemetry 2.x** is governed by **§7** until this package explicitly supports it or documents a permanent exclusion with rationale.
 
 ### 3.4 Optional OTLP extra
 
@@ -75,9 +75,9 @@ If `[project.optional-dependencies].otlp` pins `opentelemetry-exporter-otlp-prot
 
 **[.github/workflows/ci.yml](../.github/workflows/ci.yml)** job **`test`** (Python **3.12**) uses **`strategy.matrix`** with four cells: **replayt** pinned to **0.4.0** or **latest** (upgrade reinstall), crossed with **OpenTelemetry** **1.20.0** and **1.40.0** (API and SDK forced to the same version per cell). After `pip install -e ".[dev]"`, the workflow reapplies those pins, runs **Print resolved dependency versions** (`importlib.metadata.version` for `replayt`, `opentelemetry-api`, `opentelemetry-sdk`), then **Ruff** and **pytest**—same commands as a single-job baseline. **How** those checks are split into steps, named, and logged is specified in **[CI_SPEC.md](CI_SPEC.md)**.
 
-### 4.2 Target state (Builder obligation) — satisfied
+### 4.2 Target state (Builder obligation) — satisfied for OpenTelemetry 1.x
 
-The backlog automation obligations are met when items **1–3** below hold (this repository matches them as of phase **3**):
+The backlog automation obligations for the **1.x** line are met when items **1–3** below hold (this repository matches them as of phase **3** for **OpenTelemetry API/SDK 1.x**):
 
 1. **CI uses a `strategy.matrix`** (or equivalent) that runs **pytest** (and the same Ruff steps as today) for **each** claimed combination of:
    - **replayt** version pins (at least **minimum** supported and **latest** or **representative** lines as defined in this spec), and
@@ -86,6 +86,8 @@ The backlog automation obligations are met when items **1–3** below hold (this
 3. **README** and this document **name the workflow file** and the job id(s) that implement the matrix, and summarize what dimensions are covered (e.g. “replayt 0.4.x min + latest; OTel 1.20.x + 1.x latest”).
 
 Python version dimension: if `[project].requires-python` allows multiple minors, policy SHOULD state whether CI matrices multiple Python versions or only documents one; today CI uses **3.12** only—any expansion MUST be documented here and in README.
+
+**OpenTelemetry 2.x:** Do **not** add CI matrix cells for 2.x until **§7** is satisfied (spike validated, bounds justified, docs and optional extras aligned). Until then, the matrix exercises **1.x** pins only.
 
 ### 4.3 Local reproduction
 
@@ -103,14 +105,57 @@ Maintainers MAY append dated rows when changing bounds:
 
 | Phase | Criterion |
 | ----- | --------- |
-| **Spec (phase 2)** | This document exists; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7 and README link here; backlog mapping appears in PUBLIC_API_SPEC §1.1; CHANGELOG **Unreleased** notes the spec. |
-| **Builder (phase 3+)** | Matrix table populated per **§2**; `pyproject.toml` bounds match table; justifications per **§3**; CI matrix per **§4.2**; CHANGELOG records dependency-facing changes. |
+| **Spec (phase 2)** — *Add compatibility matrix and dependency pins* | This document exists; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7 and README link here; backlog mapping appears in PUBLIC_API_SPEC §1.1; CHANGELOG **Unreleased** notes the spec. |
+| **Spec (phase 2)** — *Validate OpenTelemetry 2.x and document policy* | **§7** (spike, documentation outcomes, CI gating); **§3.3** and **§4** reference **§7** where relevant; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps the backlog and **§7.4** states integrator-facing **1.x** / **2.x** policy; CHANGELOG **Unreleased** notes the spec pass. |
+| **Builder (phase 3+)** — matrix / pins backlog | Matrix table populated per **§2**; `pyproject.toml` bounds match table; justifications per **§3**; CI matrix per **§4.2**; CHANGELOG records dependency-facing changes. |
+| **Builder (phase 3+)** — *OpenTelemetry 2.x* | **§7.5** Builder row. |
 
-## 7. Related documents
+## 7. OpenTelemetry 2.x validation, policy, and CI gating
 
-- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam.
+This section is the **normative** contract for backlog item *Validate OpenTelemetry 2.x and document policy*. It applies to **`opentelemetry-api`**, **`opentelemetry-sdk`**, and the optional **`[otlp]`** extra (`opentelemetry-exporter-otlp-proto-http`), which MUST stay on the **same** supported OpenTelemetry major/minor story as API/SDK.
+
+### 7.1 Current declared position (until a Builder changes it)
+
+- **`pyproject.toml`** caps OpenTelemetry runtime dependencies **below 2** (`<2`) together with a lower bound (currently `>=1.20.0`). That cap means **OpenTelemetry Python 2.x is not a supported install target** for this package until the steps in **§7.3–7.4** complete.
+- Integrators MUST treat **1.x within the declared range** as the supported line; **2.x** is **out of scope** for support claims until documentation and matrix explicitly say otherwise.
+
+### 7.2 Spike workflow (Builder / maintainer)
+
+Before widening bounds or adding matrix cells for **2.x**, maintainers MUST run a **spike** on a **branch** (not necessarily merged) that:
+
+1. **Installs** OpenTelemetry **2.x** for API and SDK (and, if validating export paths, the matching **2.x** OTLP HTTP exporter version) using **published** packages—**pre-release** wheels are acceptable when **stable 2.x** is not yet on PyPI, provided the spike documents the exact versions used.
+2. **Runs** the same quality gates this repository expects for a merge candidate: **Ruff** lint, **Ruff** format check, and **full `pytest`** from the repository root (same invocations as [CI_SPEC.md](CI_SPEC.md) **§3.1**), after reconciling any **code** changes required for API or semantic-convention differences.
+3. **Records** findings: breaking API changes, deprecated patterns in `src/`, test adjustments, and any integrator-facing migration notes.
+
+The spike proves **feasibility**; **shipping** support still requires **§7.3–7.4**.
+
+### 7.3 Documentation outcomes (required before merge)
+
+After the spike, the **merge** that claims **2.x** support (or the decision **not** to support it) MUST update **all** of the following **in the same change set** (or an explicitly linked docs PR that lands before dependency bounds merge):
+
+| Outcome | Updates required |
+| ------- | ---------------- |
+| **Support 2.x** (range may include 1.x and 2.x or 2.x-only—decide explicitly) | `[project.dependencies]` and **`[otlp]`** bounds in `pyproject.toml`; **§2** matrix table and **§5** maintenance log row with rationale; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7** (including **§7.3** snapshot table); README **Version compatibility**; [CHANGELOG.md](../CHANGELOG.md) **Unreleased**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6** expectations for bound checks. |
+| **Explicit exclusion** (remain on **1.x** only for a release line) | This section or **§5** documents **why** (e.g. upstream instability, breaking SDK behavior not yet justified, or satellite bandwidth); [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7** states integrators must not expect 2.x; README and **§2** matrix **CI / validation** column stay accurate (still **1.x**-only matrix). |
+
+### 7.4 CI matrix expansion (after bounds are justified)
+
+- **Do not** extend **`.github/workflows/ci.yml`** `strategy.matrix` (or equivalent) with OpenTelemetry **2.x** pins until **§7.2** spike passes **Ruff + pytest** on that branch **and** **§7.3** documentation is updated to match the chosen outcome.
+- When **2.x** is supported, matrix cells MUST include at least **one** pinned **2.x** API/SDK pair (same version for both) in addition to existing **1.x** coverage **unless** this spec is amended to document a deliberate narrower claim (e.g. “2.x-only drop 1.x” in a semver-major release)—that amendment MUST appear in **§4.1** / **§2** and in [CHANGELOG.md](../CHANGELOG.md).
+- Resolved-version logging (**§4.2** item 2) MUST include **`opentelemetry-api`** and **`opentelemetry-sdk`** for every **new** 2.x cell.
+
+### 7.5 Acceptance criteria summary (this backlog)
+
+| Phase | Criterion |
+| ----- | --------- |
+| **Spec (phase 2)** | **§7** exists with spike workflow, documentation outcomes table, and CI gating; **§3.3** references **§7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps this backlog; **§7.4** there states integrator-facing **1.x** / **2.x** policy and cross-links here. |
+| **Builder (phase 3+)** | Spike executed per **§7.2**; **§7.3** satisfied for support or exclusion; if support: `pyproject.toml`, CI matrix per **§7.4**, README, CHANGELOG, and tests green on claimed bounds; if exclusion: docs and rationale per **§7.3** without widening `<2`. |
+
+## 8. Related documents
+
+- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam; OpenTelemetry 2.x policy cross-link.
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — **`docs/reference-documentation/`** version-stamped snapshots; replayt lines MUST match **§4.1** pins.
-- [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, and what the suite must prove at the replayt boundary.
-- [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest.
+- [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, **§4.6** dependency bound checks, and what the suite must prove at the replayt boundary.
+- [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest; matrix pins follow **§4** / **§7** here.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — explicit contracts and consumer-side maintenance.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing dependency and validation notes.
