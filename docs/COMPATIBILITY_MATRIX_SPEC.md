@@ -36,7 +36,7 @@ Optional rows for **`[project.optional-dependencies]`** (e.g. OTLP HTTP extra) S
 
 ### 2.3 Consistency rule
 
-When `[project.dependencies]` (or optional extras) change in a release branch, **the matrix and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7.3 snapshot MUST be updated in the same change** (or the same PR), so integrators never see contradictory bounds.
+When `[project.dependencies]` (or optional extras) change in a release branch, **the matrix and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7.3 snapshot MUST be updated in the same change** (or the same PR), so integrators never see contradictory bounds. When **§4.1** replayt pins or policy change, refresh **`docs/reference-documentation/`** version stamps in the same change set (or a follow-up docs PR) per **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) §4.3**.
 
 ## 3. `pyproject.toml` bounds and justification
 
@@ -109,6 +109,7 @@ Maintainers MAY append dated rows when changing bounds:
 ## 7. Related documents
 
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam.
+- [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — **`docs/reference-documentation/`** version-stamped snapshots; replayt lines MUST match **§4.1** pins.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, and what the suite must prove at the replayt boundary.
 - [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — explicit contracts and consumer-side maintenance.

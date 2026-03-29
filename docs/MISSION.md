@@ -71,6 +71,7 @@ Concrete outcomes we optimize for:
    **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)**,
    **[OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md)**,
    **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**,
+   **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)**,
    **[CI_SPEC.md](CI_SPEC.md)**, and
    **[TESTING_SPEC.md](TESTING_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, the
    documented public surface, version/matrix policy, and **what tests must prove** (this package stays compatible by pins, tests, and notes **here**; it does not steer
