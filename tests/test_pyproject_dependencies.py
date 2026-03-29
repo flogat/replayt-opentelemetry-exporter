@@ -44,20 +44,21 @@ def test_installed_version_satisfies_pyproject_runtime_spec(package: str) -> Non
 
 
 def test_replayt_specifier_open_upper_matches_ci_latest_row() -> None:
-    """COMPATIBILITY_MATRIX_SPEC §3.3 / §8.3: no replayt cap until §8.2; merge gate uses latest.
+    """COMPATIBILITY_MATRIX_SPEC §3.3 + TESTING_SPEC §4.6: open replayt upper until a cap ships.
 
     Job ``test`` reinstalls ``replayt`` with ``latest``; declared bounds must still admit
-    a high line so matrix cells stay valid integrator stories. When §8.2 adds an upper
-    bound, replace this with §8.4 checks (minimum contained, representative excluded
-    version not contained) and adjust CI per §8.3 if ``latest`` would fall outside.
+    a high sentinel version so matrix cells stay consistent with ``pyproject.toml``.
+    When maintainers add an upper bound after a known-breaking release, replace this
+    with packaging checks (minimum contained, representative excluded version not
+    contained) and update README, PUBLIC_API_SPEC §7.3, and CI in the same change.
     """
     by_name = _requirement_by_name()
     spec = by_name["replayt"].specifier
-    assert Version("0.4.0") in spec
+    assert spec.contains(Version("0.4.0"))
     sentinel = Version("999999.0.0")
-    assert sentinel in spec, (
-        "replayt has an upper cap; extend tests per COMPATIBILITY_MATRIX_SPEC §8.4 and "
-        "align README, PUBLIC_API_SPEC §7.3, and CI matrix per §8.3."
+    assert spec.contains(sentinel), (
+        "replayt has an upper cap; extend tests per TESTING_SPEC §4.6 and "
+        "align README, PUBLIC_API_SPEC §7.3, and the CI matrix with COMPATIBILITY_MATRIX_SPEC §3.3."
     )
 
 
