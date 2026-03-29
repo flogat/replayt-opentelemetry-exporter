@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Phase **3** builder (*Semantic conventions review for span and metric names*): **`tests/test_tracing.py`** adds **`test_public_api_spec_semantic_inventory_matches_tracing`**, locking canonical metric instrument names, meter scope **`replayt.workflow`**, **`build_resource`** **service.** resource keys, lifecycle event and completion attribute strings, and the default **`workflow_run_span`** span name to [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.7** / **§6.8** per [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§5** item **5**.
+
 ### Documentation
 - Phase **2** spec (*Semantic conventions review for span and metric names*): [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§1.1** maps the backlog; **§5.7** and **§6.8** inventory metrics, resource attributes, span names, lifecycle events, and span keys against OpenTelemetry semantic conventions (aligned vs intentionally vendor-namespaced), document stability when upstream conventions evolve, and tie to **§8** item **15**. [docs/DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Explicit contracts** references the naming contract; [docs/OPERATOR_MONITORING_SPEC.md](docs/OPERATOR_MONITORING_SPEC.md) intro and [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§5** / **§6** cross-link **§5.7** / **§6.8**.
 - Phase **5** architect (*Expand CI matrix with optional Python 3.11 job*): [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§1.1** maps the backlog; **§7.2**–**§7.3** and **§8** item **14** name job **`test-python-3-11`** and [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3** / [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**. [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§3.2** states the supplemental job repeats the same Ruff and pytest commands on **`schedule`** / **`workflow_dispatch`**.
