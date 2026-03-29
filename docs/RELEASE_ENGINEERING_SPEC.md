@@ -32,6 +32,18 @@ The backlog item *Release engineering: PyPI publish and version sync* is satisfi
 | **GHA workflow** gated on **tag** with **trusted publishing** | **§5.2** — sketch and Builder checklist; OIDC + `pypa/gh-action-pypi-publish` (or documented successor); **no** PyPI password secret in repo for the default path. |
 | **No accidental drift** between **CHANGELOG** and **`__version__`** / distribution version | **§6.3**, **§7** — release-time rules; optional **§6.4** automation hook for Builder. |
 
+### 3.1 Backlog: *Ship first PyPI release and document version / upgrade policy*
+
+The backlog item *Ship first PyPI release and document version / upgrade policy* is satisfied when the following normative material exists and stays aligned (documentation is **Spec**; **PyPI upload** and **tag** are **maintainer / Builder** execution):
+
+| Backlog theme | Normative location |
+| ------------- | ------------------ |
+| **Version bump**, **tag**, **PyPI** publish path (workflow or equivalent) | **§4**–**§5.2**, **§6**–**§6.3**; **`.github/workflows/publish-pypi.yml`**; README **Releases and PyPI** |
+| **CHANGELOG** sections match the shipped version (no stale **Unreleased**-only story for released work) | **§6.3**; **§9.2**; [CHANGELOG.md](../CHANGELOG.md) |
+| **Integrator** guidance: **pinning**, **SemVer** for **this** adapter, **breaking** expectations for **`__all__`** and **metric / trace names** | [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.6**, **§3**, **§5.7**, **§6.8**; README **Pinning, SemVer, and breaking changes** |
+
+**Fact note:** The repository may already ship **`[project].version` 0.2.0** and automation from the *Release engineering: PyPI publish and version sync* backlog; this backlog still **requires** explicit integrator-facing **upgrade policy** prose (README + **§7.6**) and a **verifiable** first consumer line on **PyPI** matching **§9.1** (**0.2.0** vs scaffold **0.1.0**).
+
 ## 4. Maintainer release checklist (normative)
 
 Before **any** PyPI release of **`replayt-opentelemetry-exporter`**, maintainers MUST follow this order unless a later revision of this spec documents a **narrower** automation that makes a step redundant (e.g. fully automated changelog — **not** required by this backlog):
@@ -116,14 +128,14 @@ Exact test placement is **[TESTING_SPEC.md](TESTING_SPEC.md)** / Builder discret
 
 ## 7. Builder acceptance checklist
 
-The **implementation** backlog for *Release engineering: PyPI publish and version sync* is complete when:
+The **implementation** backlog for *Release engineering: PyPI publish and version sync* (and the overlapping *Ship first PyPI release and document version / upgrade policy* documentation obligations in **§3.1**) is complete when:
 
 1. **§6.1** — One version strategy is **implemented** and **documented** in README **Releases** (and **§2** here updated if facts change).
 2. **§4** — Maintainer checklist is **reachable** from README (link to **this spec** or a README section that **reproduces** the checklist without contradiction).
 3. **§5.1–§5.2** — **`python -m build`** + **`twine check`** documented; **tag-triggered** workflow exists and uses **trusted publishing** (**OIDC**) without **default** long-lived PyPI token in repo secrets.
 4. **§6.2–§6.3** — Tag convention and **CHANGELOG** rules are **documented** and **satisfied** for the **first** release cut under the new process (may be a **patch** that **only** fixes versioning/docs if needed).
 5. **§6.4** — Drift guardrail **shipped** or **explicitly waived** in a tracked doc (waive only with maintainer rationale — default: **do not waive**).
-6. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **13** passes in review alongside this document.
+6. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** items **13** and **17** pass in review alongside this document (**§3.1** integrator policy).
 
 ## 8. Related documents
 

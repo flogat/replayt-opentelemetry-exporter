@@ -14,6 +14,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
 - **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), strategy **B** version sync (**§6.1**), [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) for tag-gated **OIDC** publish (**§5.2**).
+- **Pins and upgrades:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§7.6** and **Pinning, SemVer, and breaking changes** below.
 - **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below. For a **`Runner.run`** walk-through with **`MockLLMClient`**, see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md).
 
 ### Public surface at a glance
@@ -42,6 +43,15 @@ Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 | OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http>=1.20.0,<2` | Same OpenTelemetry major as API/SDK; install locally with `pip install -e ".[dev,otlp]"` and match a matrix cell if you need parity |
 
 Matrix updates are validated by [`.github/workflows/ci.yml`](.github/workflows/ci.yml): each qualifying **`push`** / **`pull_request`** runs **Ruff** and **pytest** once per matrix cell (**eight** rows: **3.11** and **3.12** × four replayt×OpenTelemetry combinations). Approximate a cell locally with the Python minor you care about, `pip install -e ".[dev]"`, then `pip install "replayt==0.4.0" "opentelemetry-api==1.20.0" "opentelemetry-sdk==1.20.0"` (or `latest` / `1.40.0` as needed), and `pytest` from the repo root.
+
+## Pinning, SemVer, and breaking changes
+
+**Normative detail:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§7.6** (adapter SemVer), **§3** (stable exports / `__all__`), **§5.7** and **§6.8** (when metric, span, and lifecycle names change).
+
+- **Pin this package** — Use an exact version in lockfiles or requirements (for example `replayt-opentelemetry-exporter==0.2.0`) or a bounded range your release process allows (for example `>=0.2.0,<0.3.0`). Pin **replayt** and **OpenTelemetry** separately so they stay within the ranges in **`pyproject.toml`** and [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md).
+- **What SemVer covers here** — Version numbers on **PyPI** for **`replayt-opentelemetry-exporter`** follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) / SemVer as described in [CHANGELOG.md](CHANGELOG.md). They describe **this adapter’s** public surface and documented telemetry identifiers, **not** upstream replayt or OpenTelemetry release policies.
+- **First stable line** — **0.2.0** is the first release that ships the stable exporter API and tracing/metrics contract; **0.1.0** was packaging scaffold only ([docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) **§9.1**). Upgrade notes live in the dated CHANGELOG section for your target version.
+- **Breaking changes to watch** — Expect a **major** bump when **`__all__`** loses or renames documented symbols (**§3**), or when canonical **metric names**, **default span name**, or **lifecycle events/attributes** change in ways that break **§5.7** / **§6.8** stability rules (dashboards, alerts, and downstream queries). **Minor** releases may add symbols or backward-compatible telemetry; **patch** releases fix bugs without breaking that contract.
 
 ## Design principles
 
@@ -151,6 +161,8 @@ Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](do
 **Normative spec:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), **`python -m build`** + **`twine check`**, **tag** naming (**§6.2**), **CHANGELOG** cut rules (**§6.3**), and **GitHub Actions** for **OIDC trusted publishing** (**§5.2**). The package name on PyPI is **`replayt-opentelemetry-exporter`** (from **`pyproject.toml`** **`[project].name`**).
 
 **Version (strategy B):** The distribution version is **`[project].version`** in **`pyproject.toml`** only. **`replayt_opentelemetry_exporter.__version__`** reads **`importlib.metadata.version("replayt-opentelemetry-exporter")`** so there is no second literal to drift. **`tests/test_version_sync.py`** enforces equality between **`pyproject.toml`**, installed metadata, and **`__version__`**.
+
+**After publish:** To confirm [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§8** item **17** against the live index, run **`VERIFY_PYPI_INDEX=1 pytest tests/test_pypi_index.py -q`**. Default **`pytest`** skips that module so PR CI stays offline-safe until the project exists on PyPI.
 
 **Local build and check** (after `pip install -e ".[dev]"` so **`build`** and **`twine`** are available):
 

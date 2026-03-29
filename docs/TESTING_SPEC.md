@@ -41,6 +41,10 @@ The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/
 
 - **pytest:** Process exit code **`0`** when all tests pass; **non-zero** on failures, errors, or interrupted runs. Custom scripts MUST NOT remap pytest’s exit codes unless README and this section are updated together.
 
+### 3.4 Optional PyPI index check (maintainers)
+
+**[`tests/test_pypi_index.py`](../tests/test_pypi_index.py)** is **skipped** unless the environment sets **`VERIFY_PYPI_INDEX=1`** (or **`true`** / **`yes`**). It requests the PyPI JSON API for **`replayt-opentelemetry-exporter`** and asserts the published **`info.version`** matches **`[project].version`** in **`pyproject.toml`**, with **`info.name`** normalized to the canonical distribution name ([PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§8** item **17**). Default **`pytest`** and CI omit this variable so the merge gate stays offline-safe. README **Releases and PyPI** documents the exact command.
+
 ## 4. Test strategy
 
 ### 4.1 Determinism and fakes
@@ -97,6 +101,6 @@ The **implementation** backlog for this item is complete when all of the followi
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — run boundary, metrics, lifecycle, semantic convention alignment (**§5.7**, **§6.8**), §8 Builder checklist.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — CI matrix and local reproduction.
 - [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest workflow steps, failure surfacing, CI log hygiene.
-- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — optional **version drift** tests; placement per that document **§6.4**.
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — optional **version drift** tests; placement per that document **§6.4**; optional PyPI index proof per **§3.4** here and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§8** item **17**.
 - [README.md](../README.md) — contributor commands.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing notes when test obligations change.

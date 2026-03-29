@@ -117,6 +117,16 @@ The backlog item *Release engineering: PyPI publish and version sync* is satisfi
 
 Implementing **`pyproject.toml` / `__init__.py` changes**, **`python -m build`**, **twine**, **publish workflow YAML**, and **drift tests** is **Builder** work; this §1.1 row and [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** are the contracts.
 
+The backlog item *Ship first PyPI release and document version / upgrade policy* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| **First consumer-capable release** is defined (**0.2.0** line vs scaffold **0.1.0**) and **CHANGELOG** / **PyPI** story is consistent | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9.1**, **§6.3**, **§9.2**; [CHANGELOG.md](../CHANGELOG.md) dated **`[0.2.0]`**; **§7.6** here |
+| Maintainers can **cut a release** (version, tag, build, publish) without guessing | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§4**, **§5**, **§5.2**, **§7**; README **Releases and PyPI** |
+| Integrators see **how to pin**, how **SemVer** applies to **this adapter**, and when **`__all__`** / **metric and trace names** may break | **§7.6**; **§3** (exports); **§5.7**, **§6.8** (rename and semver rules); README **Pinning, SemVer, and breaking changes** |
+
+Shipping the **artifact** to PyPI (version bump, tag, workflow run, or documented manual upload) and verifying the install is **Builder** / maintainer execution; **§8** items **13**, **16**, and **17** are the implementation and review checklist. The backlog body’s note that source showed **`0.1.0`** describes **pre-0.2.0** drift; the **normative** first aligned line is **`[project].version` 0.2.0** with **[CHANGELOG.md](../CHANGELOG.md)** and [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§2** as fact sources.
+
 The backlog item *Semantic conventions review for span and metric names* is satisfied for **documentation** when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -436,7 +446,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 ### 7.3 Compatibility snapshot (copy for releases)
 
-Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` at spec time; **maintainers update this table** when bounds change. **Version bump procedure**, **tag naming**, **CHANGELOG** cut lines, and **PyPI** publish steps are normative in **[RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md)** (keep **§7.3** aligned with **`[project].version`** when releasing).
+Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` at spec time; **maintainers update this table** when bounds change. **Version bump procedure**, **tag naming**, **CHANGELOG** cut lines, and **PyPI** publish steps are normative in **[RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md)** (keep **§7.3** aligned with **`[project].version`** when releasing). **Integrator** SemVer and pinning are normative in **§7.6**.
 
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
@@ -456,6 +466,16 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 ### 7.5 TODO allowed
 
 - Exact **upper** bounds for replayt or OTel when upstream has not yet published a breaking release: MAY remain `TODO` in [CHANGELOG.md](../CHANGELOG.md), here, or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) until validated—provided **§3** of that document still records rationale for existing lower bounds.
+
+### 7.6 Adapter SemVer, pinning, and breaking changes (integrators)
+
+This section applies to the **distribution** **`replayt-opentelemetry-exporter`** (PyPI name). It does **not** define semver for **replayt** or **OpenTelemetry** themselves—those dependencies have their own release policies; integrators pin them separately per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) and README **Version compatibility**.
+
+- **SemVer claim** — Release versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) as stated in [CHANGELOG.md](../CHANGELOG.md). The **first PyPI line** that ships the stable exporter contract (**§3**, tracing/metrics **§5–§6**) is **0.2.0**; **0.1.0** was scaffold-only ([RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9.1**).
+- **Pinning** — In applications and services, pin this package with an **exact** version (for example `replayt-opentelemetry-exporter==0.2.0` in `requirements.txt`) or a **bounded** range your policy allows (for example `>=0.2.0,<0.3.0`) so upgrades are deliberate. Combine with pins or ranges for **`replayt`** and **OpenTelemetry** that satisfy **`pyproject.toml`** and the compatibility spec.
+- **What counts as breaking (typically MAJOR)** — Removing or renaming any symbol listed in **§3** / `__all__`; changing canonical **metric instrument names**, **default span name**, **lifecycle event** names, or **completion attribute keys** in ways that contradict the stability rules in **§5.7** and **§6.8** (including dashboard-breaking renames without a documented migration path).
+- **MINOR / PATCH (typical)** — **MINOR:** additive symbols in **§3**, backward-compatible optional metrics or attributes, new documented hooks that do not break existing callers. **PATCH:** bugfixes, internal refactors, documentation, or telemetry behavior that preserves the **§5–§6** contract and **§3** surface.
+- **Upgrades** — Read the **[CHANGELOG.md](../CHANGELOG.md)** section dated for the target version (not only **`[Unreleased]`**), README **Releases and PyPI**, and **Upgrading** notes in the changelog; follow [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9.2.4** when migrating across lines that differ in public surface or telemetry names.
 
 ## 8. Acceptance criteria (for Builder / QA)
 
@@ -477,6 +497,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 14. **Python 3.11 requires-python parity** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** and [CI_SPEC.md](CI_SPEC.md) **§3.6**: merge gate runs the **full** replayt×OpenTelemetry matrix on **3.11** and **3.12**; Ruff + pytest match **§3.1** and README on every row; **§7.2**–**§7.3** here and README **Version compatibility** stay aligned (**declared vs tested**).
 15. **Semantic conventions inventory** — **§5.7** and **§6.8** stay accurate for shipped metrics, resource attributes, span names, lifecycle events, and span attribute keys; any rename or new canonical identifier updates **§5–§6**, **§5.7**, **§6.8**, [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) when PromQL examples are affected, README **Metrics** / trace verification when user-facing, tests per [TESTING_SPEC.md](TESTING_SPEC.md) **§5**, and [CHANGELOG.md](../CHANGELOG.md) per the stability rules in **§6.8**.
 16. **Changelog and milestone hygiene** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9** is satisfied for the release line in scope: CHANGELOG **cut** and **compare** expectations (**§9.2.1–§9.2.2**), README vs shipped tracing/metrics (**§9.2.3**), **Upgrading** / adoption notes from **0.1.0** and any renames (**§9.2.4**), version consistency (**§9.2** item **5**), and milestone policy (**§9.3**) when applicable. **Evidence for 0.2.0:** **[CHANGELOG.md](../CHANGELOG.md)** `[0.2.0]` includes the GitHub compare link and **Upgrading from 0.1.0**; README **Releases and PyPI** states milestones are unused (**§9.3** N/A); README **Metrics** / tracing steps match **§5–§6** and `src/replayt_opentelemetry_exporter/tracing.py` at **`[project].version` 0.2.0** (Builder phase 3, backlog *Changelog and milestone hygiene for 0.2.0*).
+17. **First PyPI line and integrator upgrade policy** — **§7.6** is accurate for the current **`[project].version`**; README **Pinning, SemVer, and breaking changes** matches **§7.6**, **§3**, **§5.7**, and **§6.8** without contradiction. For the backlog *Ship first PyPI release and document version / upgrade policy*: **PyPI** lists **`replayt-opentelemetry-exporter`** at the version matching **`pyproject.toml`**, **git tag** `vX.Y.Z`, and the topmost dated CHANGELOG section (see **§8** items **13** and **16**); integrators can adopt from README + **§7.6** alone for pin and semver expectations.
 
 ## 9. Related documents
 
@@ -489,5 +510,5 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).
-- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (this document **§8** item **13**), **§9** changelog/README/milestone hygiene (this document **§8** item **16**).
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (this document **§8** item **13**), **§9** changelog/README/milestone hygiene (this document **§8** item **16**), **§3.1** backlog overlap with **§7.6** / **§8** item **17**.
 - [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/) — informative upstream reference; **§5.7** and **§6.8** document how this package relates to them.
