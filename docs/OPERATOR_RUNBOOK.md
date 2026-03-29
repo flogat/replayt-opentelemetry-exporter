@@ -1,6 +1,6 @@
 # Operator runbook: canonical replayt exporter metrics
 
-This runbook maps the three canonical metrics from [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5** to **Prometheus-style** queries, **Grafana-style** panel ideas, and **alert starting points**. Label semantics, cardinality, and trace drill-down keys are normative in **§5.2–§5.4** and **§6** of that document.
+This runbook maps the three canonical metrics from [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5** to **Prometheus-style** queries, **Grafana-style** panel ideas, and **alert starting points**. Label semantics, cardinality, and trace drill-down keys are normative in **§5.2–§5.4** and **§6** of that document; **§5.7** and **§6.8** describe how those metric and trace names relate to OpenTelemetry semantic conventions and what happens when names change.
 
 ## Verify names and labels on your scrape
 
