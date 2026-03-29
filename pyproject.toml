@@ -21,6 +21,9 @@ dev = [
 otlp = [
   "opentelemetry-exporter-otlp-proto-http>=1.20.0,<2",
 ]
+otlp-grpc = [
+  "opentelemetry-exporter-otlp-proto-grpc>=1.20.0,<2",
+]
 
 [build-system]
 requires = ["setuptools>=61"]

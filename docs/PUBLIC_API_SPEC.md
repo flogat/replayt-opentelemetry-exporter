@@ -466,8 +466,7 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 | Tested replayt (CI) | Matrix cells **0.4.0** and **latest** | See [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. |
 | Reference replayt (examples) | **0.4.25** (baseline log) | Update when README claims a different line. |
 | OTLP HTTP extra (`[otlp]`) | `opentelemetry-exporter-otlp-proto-http` per `pyproject.toml` | Same OpenTelemetry line as API/SDK; see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4.1**. |
-
-When **`[otlp-grpc]`** ships, add a row here for **`opentelemetry-exporter-otlp-proto-grpc`** mirroring **`[otlp]`** per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4.2**.
+| OTLP gRPC extra (`[otlp-grpc]`) | `opentelemetry-exporter-otlp-proto-grpc` per `pyproject.toml` | Same specifiers as **`[otlp]`**; see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4.2**. |
 
 ### 7.4 OpenTelemetry 2.x policy (normative)
 

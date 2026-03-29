@@ -69,6 +69,24 @@ def test_pyproject_otlp_extra_aligns_with_api_sdk_otel_bounds() -> None:
     assert not spec.contains(Version("2.0.0"))
 
 
+def test_pyproject_otlp_grpc_extra_mirrors_otlp_http_specifiers() -> None:
+    """COMPATIBILITY_MATRIX_SPEC 3.4.2 / TESTING_SPEC 4.6: [otlp-grpc] matches [otlp] bounds."""
+    data = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))
+    optional = data["project"].get("optional-dependencies") or {}
+    otlp = optional.get("otlp") or []
+    otlp_grpc = optional.get("otlp-grpc") or []
+    assert otlp_grpc, "pyproject.toml must declare [project.optional-dependencies].otlp-grpc"
+    http_by_name = {Requirement(line).name: Requirement(line) for line in otlp}
+    grpc_by_name = {Requirement(line).name: Requirement(line) for line in otlp_grpc}
+    assert "opentelemetry-exporter-otlp-proto-http" in http_by_name
+    assert "opentelemetry-exporter-otlp-proto-grpc" in grpc_by_name
+    http_spec = http_by_name["opentelemetry-exporter-otlp-proto-http"].specifier
+    grpc_spec = grpc_by_name["opentelemetry-exporter-otlp-proto-grpc"].specifier
+    assert str(http_spec) == str(grpc_spec), (
+        f"[otlp] HTTP specifier {http_spec!r} must match [otlp-grpc] gRPC specifier {grpc_spec!r}"
+    )
+
+
 def test_requires_python_matches_project_and_runtime() -> None:
     data = tomllib.loads(_PYPROJECT.read_text(encoding="utf-8"))
     assert data["project"]["requires-python"] == ">=3.11"
