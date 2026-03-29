@@ -1,4 +1,4 @@
-"""GitHub Actions workflow matches docs/CI_SPEC.md obligations for job test."""
+"""GitHub Actions workflow matches docs/CI_SPEC.md for jobs test and test-python-3-11."""
 
 from __future__ import annotations
 
@@ -15,13 +15,17 @@ def _load_ci() -> dict:
     return yaml.safe_load(_CI_YML.read_text(encoding="utf-8"))
 
 
-def _test_job_steps(data: dict) -> list[dict]:
+def _job_steps(data: dict, job_id: str) -> list[dict]:
     jobs = data.get("jobs") or {}
-    test = jobs.get("test")
-    assert test is not None, "ci.yml must define job 'test'"
-    steps = test.get("steps")
-    assert isinstance(steps, list) and steps, "job 'test' must have non-empty steps"
+    job = jobs.get(job_id)
+    assert job is not None, f"ci.yml must define job {job_id!r}"
+    steps = job.get("steps")
+    assert isinstance(steps, list) and steps, f"job {job_id!r} must have non-empty steps"
     return steps
+
+
+def _test_job_steps(data: dict) -> list[dict]:
+    return _job_steps(data, "test")
 
 
 def _named_run_steps(steps: list[dict]) -> list[tuple[str, str]]:
@@ -84,3 +88,59 @@ def test_ci_test_job_logs_dependency_versions_before_checks() -> None:
     assert audit in names, f"expected step {audit!r}"
     assert "Ruff check" in names
     assert names.index(audit) < names.index("Ruff check")
+
+
+def test_ci_has_schedule_for_supplemental_python_311() -> None:
+    """CI_SPEC §3.6 — supplemental 3.11 reachable via schedule and workflow_dispatch."""
+    data = _load_ci()
+    on = data.get("on")
+    assert isinstance(on, dict), "ci.yml top-level on: must be a mapping"
+    sched = on.get("schedule")
+    assert isinstance(sched, list) and sched, "on.schedule must be a non-empty list"
+    assert any(isinstance(item, dict) and "cron" in item for item in sched), (
+        "on.schedule must include at least one cron mapping"
+    )
+    assert "workflow_dispatch" in on, "on.workflow_dispatch must be present"
+
+
+def test_ci_supplemental_python_311_job_ruff_pytest_and_audit() -> None:
+    """CI_SPEC §3.6 / COMPATIBILITY §4.3 — same Ruff/pytest as test; audit before checks."""
+    data = _load_ci()
+    job = (data.get("jobs") or {}).get("test-python-3-11")
+    assert job is not None, "ci.yml must define job 'test-python-3-11'"
+    assert job.get("if") == (
+        "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"
+    )
+
+    steps = _job_steps(data, "test-python-3-11")
+    setup_py = None
+    for step in steps:
+        if isinstance(step, dict) and step.get("uses") == "actions/setup-python@v5":
+            setup_py = step.get("with") or {}
+            break
+    assert setup_py is not None, "test-python-3-11 must use actions/setup-python@v5"
+    assert setup_py.get("python-version") == "3.11"
+
+    pairs = _named_run_steps(steps)
+    by_name = {n: r for n, r in pairs}
+    assert "Apply pins (replayt latest + OpenTelemetry API/SDK 1.40.0)" in by_name
+    pins = by_name["Apply pins (replayt latest + OpenTelemetry API/SDK 1.40.0)"]
+    assert "opentelemetry-api==1.40.0" in pins
+    assert "opentelemetry-sdk==1.40.0" in pins
+    assert "replayt" in pins.lower()
+
+    assert by_name.get("Ruff check") == "ruff check src tests"
+    assert by_name.get("Ruff format") == "ruff format --check src tests"
+    assert by_name.get("Run tests") == "pytest -q"
+
+    names = [n for n, _ in pairs]
+    audit = "Print resolved dependency versions (matrix audit)"
+    assert audit in names
+    assert names.index(audit) < names.index("Ruff check")
+
+    for label, cmd in (
+        ("Ruff check", by_name["Ruff check"]),
+        ("Ruff format", by_name["Ruff format"]),
+        ("Run tests", by_name["Run tests"]),
+    ):
+        assert "|| true" not in cmd, f"{label} must not mask non-zero exit with || true"

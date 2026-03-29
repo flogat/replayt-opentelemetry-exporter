@@ -3,7 +3,7 @@ name: CI
 permissions:
   contents: read
 
-on:
+'on':
   push:
     branches:
       - master
@@ -14,6 +14,9 @@ on:
       - master
       - "mc/**"
   workflow_dispatch:
+  schedule:
+    # Weekly supplemental Python 3.11 smoke (CI_SPEC §3.6); low-noise cadence
+    - cron: "0 6 * * 1"
 
 jobs:
   test:
@@ -51,6 +54,41 @@ jobs:
           else
             pip install --force-reinstall "replayt==${{ matrix.replayt }}"
           fi
+      - name: Print resolved dependency versions (matrix audit)
+        run: |
+          python - <<'PY'
+          import importlib.metadata as m
+
+          for dist in ("replayt", "opentelemetry-api", "opentelemetry-sdk"):
+              print(dist, m.version(dist))
+          PY
+      - name: Ruff check
+        run: ruff check src tests
+      - name: Ruff format
+        run: ruff format --check src tests
+      - name: Run tests
+        run: pytest -q
+
+  test-python-3-11:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package and dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Apply pins (replayt latest + OpenTelemetry API/SDK 1.40.0)
+        run: |
+          pip install --force-reinstall \
+            "opentelemetry-api==1.40.0" \
+            "opentelemetry-sdk==1.40.0"
+          pip install --upgrade --force-reinstall replayt
       - name: Print resolved dependency versions (matrix audit)
         run: |
           python - <<'PY'
