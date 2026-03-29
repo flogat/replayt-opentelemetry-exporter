@@ -165,6 +165,8 @@ with workflow_run_span(tracer, "my-workflow-id", run_id="optional-run-id"):
     ...
 ```
 
+For **`Runner.run`** with the same boundary pattern (in-memory OpenTelemetry and **`MockLLMClient`**), see **§3.4** below.
+
 Optional dependency: OTLP HTTP exporters are not in the core dependency set; integrators install `replayt-opentelemetry-exporter[otlp]` (or an equivalent extra) when using OTLP, per `pyproject.toml`.
 
 ### 3.4 Runner-based example (normative deliverable)
