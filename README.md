@@ -10,7 +10,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 
 ## Public API (summary)
 
-- **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
+- **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric and trace naming (including **§5.7** and **§6.8** vs OpenTelemetry semantic conventions), version expectations, and testable acceptance criteria.
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
 - **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), strategy **B** version sync (**§6.1**), [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) for tag-gated **OIDC** publish (**§5.2**).
@@ -113,13 +113,13 @@ CI runs those checks on Python **3.12** (job **`test`**). Each matrix cell reins
        ...  # e.g. replayt Runner / Workflow invocation
    ```
 
-3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend. Verify span **events** `replayt.workflow.run.started` and `replayt.workflow.run.completed` and completion attributes such as `replayt.workflow.outcome` (and on failures `replayt.workflow.error.type` / `replayt.workflow.failure.category`) so operators can see run start and outcome without reading raw exception messages in attributes. Names and semantics are defined in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6**.
+3. Point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector (for example Jaeger's OTLP endpoint) and confirm spans named `replayt.workflow.run` with attributes `replayt.workflow.id` / `replayt.run.id` appear in your backend. Verify span **events** `replayt.workflow.run.started` and `replayt.workflow.run.completed` and completion attributes such as `replayt.workflow.outcome` (and on failures `replayt.workflow.error.type` / `replayt.workflow.failure.category`) so operators can see run start and outcome without reading raw exception messages in attributes. Names and semantics are defined in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§6**; **§6.8** states how those names relate to OpenTelemetry trace conventions and rename policy.
 
 For tests or custom wiring without touching the global provider, use `build_tracer_provider` and `build_meter_provider` and obtain a tracer/meter via `provider.get_tracer(...)` or `provider.get_meter(...)`. For in-process metric assertions, pass `metric_readers=[InMemoryMetricReader()]` to `build_meter_provider`; OTLP and similar backends keep using `metric_exporters`.
 
 ## Metrics
 
-Canonical **instrument names**, types, and semantics are defined in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5** (and tracked under **Unreleased** in [CHANGELOG.md](CHANGELOG.md)). Summary:
+Canonical **instrument names**, types, and semantics are defined in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §5** (and tracked under **Unreleased** in [CHANGELOG.md](CHANGELOG.md)); **§5.7** covers meter scope, resource keys, and how those names relate to OpenTelemetry metrics and resource conventions. Summary:
 
 | Instrument | Name (canonical) |
 | ---------- | ---------------- |
@@ -142,7 +142,7 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 
 ### Operator monitoring (dashboards and alerts)
 
-**[docs/OPERATOR_RUNBOOK.md](docs/OPERATOR_RUNBOOK.md)** — PromQL-style examples, Grafana panel intents, and alert starting points for the §5 metrics, aligned with [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5–§6** (label semantics and cardinality). Confirm metric and label names on your OTLP → Prometheus (or vendor) pipeline before copying queries verbatim.
+**[docs/OPERATOR_RUNBOOK.md](docs/OPERATOR_RUNBOOK.md)** — PromQL-style examples, Grafana panel intents, and alert starting points for the §5 metrics, aligned with [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5–§6** and **§5.7** / **§6.8** (label semantics, cardinality, and naming vs OpenTelemetry conventions). Confirm metric and label names on your OTLP → Prometheus (or vendor) pipeline before copying queries verbatim.
 
 Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](docs/OPERATOR_MONITORING_SPEC.md)**.
 

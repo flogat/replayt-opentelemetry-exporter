@@ -90,10 +90,11 @@ The **implementation** backlog for this item is complete when all of the followi
 2. **§4.3–§4.5** minimum scenarios exist and are named or documented in test docstrings referencing the spec sections they lock; **§4.2** contract row is satisfied including [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.4** (`run_with_mock` **and** **`Runner.run`** **or** documented script per that section).
 3. **No replayt private API** imports in `tests/` (only public `replayt` symbols and this package’s API).
 4. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **6** remains true: tests cover span lifecycle, §6 attributes/events, success/failure metrics, provider installation, and `__all__` parity as specified there; gaps are tracked under **Unreleased** in [CHANGELOG.md](../CHANGELOG.md) if intentionally deferred.
+5. **Semantic convention identifiers:** Any test that asserts literal span names, lifecycle event names, span attribute keys, metric instrument names, or meter scope strings stays consistent with [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5–§6** and the inventory in **§5.7** / **§6.8**; renames update those tests **in the same change** as the spec, operator runbook (if PromQL or narrative references the old name), and [CHANGELOG.md](../CHANGELOG.md) per **§8** item **15**.
 
 ## 6. Related documents
 
-- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — run boundary, metrics, lifecycle, §8 Builder checklist.
+- [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — run boundary, metrics, lifecycle, semantic convention alignment (**§5.7**, **§6.8**), §8 Builder checklist.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — CI matrix and local reproduction.
 - [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest workflow steps, failure surfacing, CI log hygiene.
 - [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — optional **version drift** tests; placement per that document **§6.4**.

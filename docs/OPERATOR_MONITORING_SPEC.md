@@ -2,7 +2,7 @@
 
 This document is the **specification** for backlog item *Document operator dashboards for canonical metrics*. It turns that backlog into **testable documentation obligations** for the **Builder** phase. Operators should be able to wire **Prometheus-compatible** monitoring and **Grafana-style** panels using this package’s **canonical instruments** without reading `tracing.py`.
 
-**Normative contracts** for instrument names, attributes, cardinality, and trace signals live in **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §5–§6**. This spec adds **observability-backend recipes** (PromQL, panel intent, alert starting points) that MUST stay aligned with those sections.
+**Normative contracts** for instrument names, attributes, cardinality, and trace signals live in **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §5–§6**, with **OpenTelemetry semantic convention alignment** (metrics, resource, traces) in **§5.7** and **§6.8**. This spec adds **observability-backend recipes** (PromQL, panel intent, alert starting points) that MUST stay aligned with those sections.
 
 ## 1. Purpose and audience
 

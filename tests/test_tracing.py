@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -35,6 +36,7 @@ from replayt_opentelemetry_exporter.tracing import (
     install_meter_provider,
     install_tracer_provider,
     record_exporter_error,
+    record_run_outcome,
     workflow_run_span,
 )
 
@@ -477,6 +479,52 @@ def test_get_workflow_tracer_uses_stable_instrumentation_scope_name() -> None:
     t2 = trace.get_tracer(tracing_mod.__name__)
     assert _tracer_scope_name(t1) == tracing_mod.__name__
     assert _tracer_scope_name(t2) == tracing_mod.__name__
+
+
+def test_public_api_spec_semantic_inventory_matches_tracing() -> None:
+    """TESTING_SPEC §5 item 5; PUBLIC_API_SPEC §5.7, §6.8 — canonical names match shipped code.
+
+    Renames MUST update this test, docs/PUBLIC_API_SPEC.md §5–§6 / §5.7 / §6.8, and CHANGELOG
+    per §8 item 15. Optional integrator-only event ``replayt.workflow.milestone`` (§6.2) is not
+    emitted by this package and has no module constant.
+    """
+    sig = inspect.signature(workflow_run_span)
+    assert sig.parameters["span_name"].default == "replayt.workflow.run"
+
+    assert tracing_mod._EVENT_WORKFLOW_RUN_STARTED == "replayt.workflow.run.started"
+    assert tracing_mod._EVENT_WORKFLOW_RUN_COMPLETED == "replayt.workflow.run.completed"
+    assert tracing_mod._ATTR_WORKFLOW_OUTCOME == "replayt.workflow.outcome"
+    assert tracing_mod._ATTR_ERROR_TYPE == "replayt.workflow.error.type"
+    assert tracing_mod._ATTR_FAILURE_CATEGORY == "replayt.workflow.failure.category"
+
+    resource = build_resource(service_name="contract-svc")
+    assert resource.attributes.get("service.name") == "contract-svc"
+    assert "service.version" in resource.attributes
+
+    reader = InMemoryMetricReader()
+    provider = build_meter_provider(metric_readers=[reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(provider)
+        record_run_outcome(True, "wf-inv", duration_ms=1.0)
+        record_exporter_error("timeout")
+        reader.collect()
+        data = reader.get_metrics_data()
+        scope_names: set[str] = set()
+        instrument_names: set[str] = set()
+        for rm in data.resource_metrics:
+            for sm in rm.scope_metrics:
+                scope_names.add(sm.scope.name)
+                for metric in sm.metrics:
+                    instrument_names.add(metric.name)
+        assert scope_names == {"replayt.workflow"}
+        assert instrument_names == {
+            "replayt.workflow.run.outcomes_total",
+            "replayt.workflow.run.duration_ms",
+            "replayt.exporter.errors_total",
+        }
+    finally:
+        metrics.set_meter_provider(previous_meter)
 
 
 def test_workflow_run_span_records_success_metrics() -> None:
