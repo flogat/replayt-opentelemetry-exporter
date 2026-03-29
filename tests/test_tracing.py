@@ -8,8 +8,14 @@ from uuid import uuid4
 import pytest
 from opentelemetry import metrics, trace
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from opentelemetry.sdk.metrics.export import (
+    InMemoryMetricReader,
+    MetricExporter,
+    MetricExportResult,
+    MetricsData,
+)
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
@@ -740,6 +746,193 @@ def test_record_exporter_error_coerces_non_recommended_to_unknown() -> None:
                             assert dp.value == 1
                             found = True
         assert found
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def _replayt_exporter_errors_total_sum(metrics_data: MetricsData | None) -> int:
+    if metrics_data is None:
+        return 0
+    total = 0
+    for rm in metrics_data.resource_metrics:
+        for sm in rm.scope_metrics:
+            for metric in sm.metrics:
+                if metric.name == "replayt.exporter.errors_total":
+                    for dp in metric.data.data_points:
+                        total += int(dp.value)
+    return total
+
+
+class _AlwaysFailSpanExporter(SpanExporter):
+    def export(self, spans):  # type: ignore[no-untyped-def]
+        return SpanExportResult.FAILURE
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
+
+
+class _TimeoutSpanExporter(SpanExporter):
+    def export(self, spans):  # type: ignore[no-untyped-def]
+        raise TimeoutError("simulated export deadline")
+
+    def shutdown(self) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
+
+
+class _AlwaysFailMetricExporter(MetricExporter):
+    def export(
+        self,
+        metrics_data: MetricsData,
+        timeout_millis: float = 10_000,
+        **kwargs,
+    ) -> MetricExportResult:
+        return MetricExportResult.FAILURE
+
+    def shutdown(self, timeout_millis: float = 30_000, **kwargs) -> None:
+        pass
+
+    def force_flush(self, timeout_millis: float = 10_000) -> bool:
+        return True
+
+
+def test_auto_exporter_errors_default_off_span_export_failure() -> None:
+    """TESTING_SPEC §4.5; PUBLIC_API_SPEC §5.5.1 — opt-in off leaves errors_total unchanged."""
+    mem_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(metric_readers=[mem_reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        span_exporter = _AlwaysFailSpanExporter()
+        trace_provider = build_tracer_provider(
+            span_exporters=[span_exporter],
+            record_exporter_errors_on_export_failure=False,
+        )
+        tracer = trace_provider.get_tracer("test")
+        with tracer.start_as_current_span("s"):
+            pass
+        trace_provider.force_flush()
+        md = mem_reader.get_metrics_data()
+        assert _replayt_exporter_errors_total_sum(md) == 0
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_auto_exporter_errors_opt_in_span_export_failure() -> None:
+    """TESTING_SPEC §4.5; PUBLIC_API_SPEC §5.5.1 — fake span exporter failure increments counter."""
+    mem_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(metric_readers=[mem_reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        span_exporter = _AlwaysFailSpanExporter()
+        trace_provider = build_tracer_provider(
+            span_exporters=[span_exporter],
+            record_exporter_errors_on_export_failure=True,
+        )
+        tracer = trace_provider.get_tracer("test")
+        with tracer.start_as_current_span("s"):
+            pass
+        trace_provider.force_flush()
+        mem_reader.collect()
+        md = mem_reader.get_metrics_data()
+        assert md is not None
+        assert _replayt_exporter_errors_total_sum(md) == 1
+        found = False
+        for rm in md.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.exporter.errors_total":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("error_type") == "export_failed":
+                                found = True
+                                assert dp.value == 1
+        assert found
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_auto_exporter_errors_opt_in_span_export_success_control() -> None:
+    """TESTING_SPEC §4.5 — success path does not increment errors_total via the hook."""
+    mem_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(metric_readers=[mem_reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        span_exporter = InMemorySpanExporter()
+        trace_provider = build_tracer_provider(
+            span_exporters=[span_exporter],
+            record_exporter_errors_on_export_failure=True,
+        )
+        tracer = trace_provider.get_tracer("test")
+        with tracer.start_as_current_span("s"):
+            pass
+        trace_provider.force_flush()
+        md = mem_reader.get_metrics_data()
+        assert _replayt_exporter_errors_total_sum(md) == 0
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_auto_exporter_errors_opt_in_timeout_error_type() -> None:
+    """TESTING_SPEC §4.5; PUBLIC_API_SPEC §5.5.1 — exception mapping for timeout."""
+    mem_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(metric_readers=[mem_reader])
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        trace_provider = build_tracer_provider(
+            span_exporters=[_TimeoutSpanExporter()],
+            record_exporter_errors_on_export_failure=True,
+        )
+        tracer = trace_provider.get_tracer("test")
+        with tracer.start_as_current_span("s"):
+            pass
+        trace_provider.force_flush()
+        mem_reader.collect()
+        md = mem_reader.get_metrics_data()
+        assert md is not None
+        assert _replayt_exporter_errors_total_sum(md) == 1
+        found = False
+        for rm in md.resource_metrics:
+            for sm in rm.scope_metrics:
+                for metric in sm.metrics:
+                    if metric.name == "replayt.exporter.errors_total":
+                        for dp in metric.data.data_points:
+                            if dp.attributes.get("error_type") == "timeout":
+                                found = True
+        assert found
+    finally:
+        metrics.set_meter_provider(previous_meter)
+
+
+def test_auto_exporter_errors_opt_in_metric_export_failure() -> None:
+    """TESTING_SPEC §4.5; PUBLIC_API_SPEC §5.5.1 — metric exporter FAILURE path.
+
+    ``PeriodicExportingMetricReader`` calls ``export`` only when a collect batch is
+    non-empty; ``record_run_outcome`` primes the pipeline. ``metric_export_interval_millis``
+    is ``inf`` so the reader does not start a background ticker (avoids racing flushes).
+    """
+    mem_reader = InMemoryMetricReader()
+    meter_provider = build_meter_provider(
+        metric_exporters=[_AlwaysFailMetricExporter()],
+        metric_readers=[mem_reader],
+        record_exporter_errors_on_export_failure=True,
+        metric_export_interval_millis=float("inf"),
+    )
+    previous_meter = metrics.get_meter_provider()
+    try:
+        metrics.set_meter_provider(meter_provider)
+        record_run_outcome(True, "wf-metric-hook", duration_ms=0.0)
+        meter_provider.force_flush()
+        md = mem_reader.get_metrics_data()
+        assert md is not None
+        assert _replayt_exporter_errors_total_sum(md) == 1
     finally:
         metrics.set_meter_provider(previous_meter)
 

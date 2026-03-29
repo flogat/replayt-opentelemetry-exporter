@@ -65,6 +65,16 @@ The backlog item *Implement automated tests for replayt boundary and exporter be
 
 Full test implementation is **Builder** work; this document’s §8 item **6** and [TESTING_SPEC.md](TESTING_SPEC.md) **§5** state the checklist.
 
+The backlog item *Optional automatic `replayt.exporter.errors_total` on export failures via processors* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Opt-in automatic recording on span and/or metric export failure, same counter and `error_type` normalization as `record_exporter_error`, no double-counting by default | **§5.5.1** |
+| Tests and fakes (no real remote collector) | [TESTING_SPEC.md](TESTING_SPEC.md) **§4.5** |
+| Metric labels stay safe and low-cardinality | **§5.3**–**§5.4**; [SECURITY_REDACTION.md](SECURITY_REDACTION.md) **Exporter health metric** |
+
+Implementing processors/readers, public flags on `build_*_provider` / `install_*_provider`, and pytest coverage is **Builder** work; **§8** item **19** and [TESTING_SPEC.md](TESTING_SPEC.md) **§5** state the checklist.
+
 The backlog item *Add CI with ruff, tests, and readable logs* is satisfied for **documentation** when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -162,7 +172,7 @@ The backlog item *Document and test `RunSummary` / `generate_run_summary` for no
 | Backlog acceptance criterion | Where it is specified |
 | ---------------------------- | -------------------- |
 | README and spec examples for **`record_run_outcome`** + **`generate_run_summary`** without full **`workflow_run_span`** coverage | **§3.5**, **[docs/examples/record_run_outcome_run_summary.md](examples/record_run_outcome_run_summary.md)**; README **Quick pattern** / **Reference documentation** |
-| Thread/async safety and meter provider requirements | **§5.5** (**§5.5.1**–**§5.5.4**) |
+| Thread/async safety and meter provider requirements | **§5.5** (**§5.5.2**–**§5.5.5**) |
 | Focused tests that metrics match **§5** success/failure semantics without a full **§6** lifecycle trace | [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7**; **§8** item **19** |
 | **`RunSummary`** generation when the integrator owns the run span | [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) (generation without **`workflow_run_span`**, acceptance criteria **6–7**) |
 
@@ -207,16 +217,16 @@ The importable package is **`replayt_opentelemetry_exporter`**. The following sy
 | ------ | ---- |
 | `__version__` | Package version string. |
 | `build_resource` | Build `Resource` for tracer/meter providers (service name, optional extra attributes). |
-| `build_tracer_provider` | Construct `TracerProvider` with optional `SpanExporter` list (no global side effects). |
-| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). |
-| `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. |
+| `build_tracer_provider` | Construct `TracerProvider` with optional `SpanExporter` list (no global side effects). Optional keyword **`record_exporter_errors_on_export_failure`** (default **false**) enables **§5.5.1** automatic `replayt.exporter.errors_total` recording on span export failure; see README for usage and ordering with the meter provider. |
+| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). Optional **`record_exporter_errors_on_export_failure`** (default **false**) and **`metric_export_interval_millis`** (passed to **`PeriodicExportingMetricReader`** when exporters are present) are defined in **§5.5.1** and README. |
+| `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. Accepts the same options as `build_tracer_provider`, including **§5.5.1** opt-in flags. |
 | `install_meter_provider` | Install meter provider on the global `opentelemetry.metrics` API. Accepts the same exporter/reader options as `build_meter_provider`. |
 | `get_workflow_tracer` | Return a `Tracer` from the **currently installed** global tracer provider, using a **stable instrumentation scope name** (implementation-defined string that MUST stay stable across minor releases—see §3.1). |
 | `workflow_run_span` | Context manager: one OpenTelemetry span for a single workflow run, with metrics side effects as specified in §4. |
 | `RunSummary` | Dataclass for a safe, non-secret run summary (see [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md)). |
 | `generate_run_summary` | Build a `RunSummary` from span and run metadata (see [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md)). |
 | `record_run_outcome` | Record run outcome metrics when the integrator does not use `workflow_run_span` for the whole run (advanced; requires a meter provider whose instruments were created by `build_meter_provider` / `install_meter_provider`). |
-| `record_exporter_error` | Record exporter health / export failure signals (advanced; same meter-provider requirement as `record_run_outcome`). |
+| `record_exporter_error` | Record exporter health / export failure signals (advanced; same meter-provider requirement as `record_run_outcome`). Optional **§5.5.1** hooks call the same recording path when integrators explicitly opt in. |
 
 ### 3.1 `get_workflow_tracer` instrumentation scope
 
@@ -275,7 +285,7 @@ The repository **MUST** ship a **minimal**, **integrator-facing** example for **
 | ----------- | ------ |
 | **Location** | Primary artifact: **`docs/examples/record_run_outcome_run_summary.md`**. The Builder **MAY** also add a sibling script under **`examples/`** if that improves copy-paste ergonomics; if so, README or the markdown file **MUST** document how to run it. |
 | **Adapter imports** | **`install_tracer_provider`**, **`install_meter_provider`** (or **`build_*`** + explicit global install), **`get_workflow_tracer`**, **`record_run_outcome`**, **`generate_run_summary`**, plus OpenTelemetry in-memory or OTLP types as needed for a self-contained demo. |
-| **Narrative** | The markdown **MUST** state: global meter wiring via this package’s helpers before **`record_run_outcome`** (**§5.5.1**); agreement between **`record_run_outcome(success=...)`** and the **`outcome`** argument to **`generate_run_summary`** when both are used (**§5.5.2**); that **`generate_run_summary`** needs a **`Span`** with SDK **`start_time`** and **`end_time`** (**§5.5.2**); threading/async guidance (**§5.5.4**). |
+| **Narrative** | The markdown **MUST** state: global meter wiring via this package’s helpers before **`record_run_outcome`** (**§5.5.2**); agreement between **`record_run_outcome(success=...)`** and the **`outcome`** argument to **`generate_run_summary`** when both are used (**§5.5.3**); that **`generate_run_summary`** needs a **`Span`** with SDK **`start_time`** and **`end_time`** (**§5.5.3**); threading/async guidance (**§5.5.5**). |
 | **Runnability** | The example **MUST** be **executable** in one of two ways: **(A)** a fenced Python block (or script) that runs with **`pip install -e ".[dev]"`** and **`python …`** as documented, or **(B)** superseded for execution by **pytest** tests marked per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7**. **At least one** of (A) or (B) is mandatory. |
 | **README** | When the artifact lands, README **MUST** link to **`docs/examples/record_run_outcome_run_summary.md`** from **Quick pattern** or **Reference documentation** (same release branch as the file). |
 
@@ -363,21 +373,34 @@ Use one of: `export_failed`, `serialization_error`, `timeout`, `unknown`. The im
 
 `record_run_outcome` and `record_exporter_error` support integrators who do not wrap the full run in `workflow_run_span`. They require a meter provider whose instruments were created through this package’s `build_meter_provider` / `install_meter_provider` (or test doubles that register the same instrument names).
 
-#### 5.5.1 Meter prerequisite and silent no-op
+### 5.5.1 Automatic export-failure recording (optional, explicit opt-in)
+
+This subsection specifies an **optional** integration path so **`replayt.exporter.errors_total`** increments when **export** fails even if the integrator does not call `record_exporter_error` manually. It exists so operators can see collector outages, serialization issues, or timeouts as **metric** signals aligned with [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) **§4.3**, without requiring a live remote backend in tests ([TESTING_SPEC.md](TESTING_SPEC.md) **§4.5**).
+
+| Rule | Requirement |
+| ---- | ----------- |
+| **Default** | **Off.** Provider builders / installers (`build_tracer_provider`, `install_tracer_provider`, `build_meter_provider`, `install_meter_provider`) MUST keep today’s behavior unless the integrator passes an **explicit** opt-in flag (boolean parameter name is **Builder**-chosen; README MUST document the name and default when the feature ships). |
+| **Double-counting** | When opt-in is **on**, the implementation MUST record **at most one** increment per **logical** export failure on the code path the hook owns. Integrators who already call `record_exporter_error` from a custom exporter or wrapper SHOULD leave automatic hooks **off** for that pipeline, or accept duplicate increments—document this in README when the flag ships. |
+| **Span export path** | When enabled, span export MUST be wrapped so that failures observed at the **`BatchSpanProcessor`** (or equivalent batching processor) boundary—typically when the configured `SpanExporter` fails—invoke the **same** normalization and counter increment as `record_exporter_error` (**§5.3** `error_type` values only). |
+| **Metric export path** | When enabled and the OpenTelemetry **metrics** SDK exposes a reliable failure surface (for example **`PeriodicExportingMetricReader`** / `MetricExporter` export errors, per supported **1.x** API), the implementation SHOULD hook symmetrically so metric export failures also increment **`replayt.exporter.errors_total`** with a normalized **`error_type`**. If a given SDK version cannot surface failures without private APIs, the spec for that release MAY document **span-only** automatic recording until a supported hook exists; [CHANGELOG.md](../CHANGELOG.md) MUST note the limitation. |
+| **Error mapping** | Map concrete exceptions or SDK error outcomes to **`export_failed`**, **`serialization_error`**, **`timeout`**, or **`unknown`** per **§5.3** (no raw exception text or unbounded strings in **metric** attributes—see [SECURITY_REDACTION.md](SECURITY_REDACTION.md) **Exporter health metric**). |
+| **Meter dependency** | Automatic recording MUST NOT create ad hoc instruments; it MUST use the same meter / counter registration path as `record_exporter_error` (global meter provider installed via this package’s **`install_meter_provider`** or tests’ **`build_meter_provider`** doubles per **§5.5**). |
+
+#### 5.5.2 Meter prerequisite and silent no-op
 
 Module-level metric instruments used by **`record_run_outcome`** and **`record_exporter_error`** are created when **`build_meter_provider`** runs (including when **`install_meter_provider`** calls it). If the process never executed **`build_meter_provider`** / **`install_meter_provider`** for the configured global meter provider, those instruments stay unset and **`record_run_outcome`** / **`record_exporter_error`** perform **no** recording and **raise no exception**. Integrators who want advanced metrics **MUST** install a meter provider through these helpers (or tests that mirror the same instrument registration on the global provider).
 
-#### 5.5.2 Pairing `record_run_outcome` and `generate_run_summary`
+#### 5.5.3 Pairing `record_run_outcome` and `generate_run_summary`
 
 **`generate_run_summary`** does not read metrics; it derives timestamps and duration from the supplied **`Span`**’s **`start_time`** and **`end_time`**. Integrators who want a **`RunSummary`** without **`workflow_run_span`** **MUST** still create and end an OpenTelemetry span that covers the logical run (or an equivalent boundary) so both timestamps exist.
 
 For one logical run, **`record_run_outcome(success=...)`** and the **`outcome`** string passed to **`generate_run_summary`** **MUST** agree: **`success=True`** with an outcome that means success (typically **`"success"`**); **`success=False`** with a failure token such as **`"failure"`**. Mixing them inconsistently is an integrator bug; metrics do not populate **`RunSummary`** fields.
 
-#### 5.5.3 Parity with `workflow_run_span` outcome metrics (`§5` labels)
+#### 5.5.4 Parity with `workflow_run_span` outcome metrics (`§5` labels)
 
 **`record_run_outcome`** records the same canonical instruments and attribute keys as the outcome path inside **`workflow_run_span`**: **`replayt.workflow.run.outcomes_total`** with **`workflow_id`**, **`outcome`** (**`success`** or **`failure`**), optional **`run_id`**; and, when **`duration_ms`** is provided, **`replayt.workflow.run.duration_ms`** with the same attributes (**§5.2**, **§5.4**).
 
-#### 5.5.4 Threading and async
+#### 5.5.5 Threading and async
 
 Global tracer and meter providers are process-wide. Call **`record_run_outcome`** and **`generate_run_summary`** from the thread or task completion path that owns the run (or after awaited work finishes) so span **`end_time`** and wall-clock duration stay aligned. This package does not add async context managers for this path; propagate trace context with your tracer API when work crosses **`await`**.
 
@@ -591,7 +614,8 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 16. **Changelog and milestone hygiene** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9** is satisfied for the release line in scope: CHANGELOG **cut** and **compare** expectations (**§9.2.1–§9.2.2**), README vs shipped tracing/metrics (**§9.2.3**), **Upgrading** / adoption notes from **0.1.0** and any renames (**§9.2.4**), version consistency (**§9.2** item **5**), and milestone policy (**§9.3**) when applicable. **Evidence for 0.2.0:** **[CHANGELOG.md](../CHANGELOG.md)** `[0.2.0]` includes the GitHub compare link and **Upgrading from 0.1.0**; README **Releases and PyPI** states milestones are unused (**§9.3** N/A); README **Metrics** / tracing steps match **§5–§6** and `src/replayt_opentelemetry_exporter/tracing.py` at **`[project].version` 0.2.0** (Builder phase 3, backlog *Changelog and milestone hygiene for 0.2.0*).
 17. **First PyPI line and integrator upgrade policy** — **§7.6** is accurate for the current **`[project].version`**; README **Pinning, SemVer, and breaking changes** matches **§7.6**, **§3**, **§5.7**, and **§6.8** without contradiction. For the backlog *Ship first PyPI release and document version / upgrade policy*: **PyPI** lists **`replayt-opentelemetry-exporter`** at the version matching **`pyproject.toml`**, **git tag** `vX.Y.Z`, and the topmost dated CHANGELOG section (see **§8** items **13** and **16**); integrators can adopt from README + **§7.6** alone for pin and semver expectations.
 18. **OTLP gRPC optional extra** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§3.4** is satisfied: **`[otlp-grpc]`** in **`pyproject.toml`** pins **`opentelemetry-exporter-otlp-proto-grpc`** with the **same** specifiers as **`[otlp]`**; README **Enable tracing** (or successor section) includes **§3.4.3** install line, **gRPC** `install_*_provider` example, env vars, and **HTTP vs gRPC** guidance; README **Version compatibility** table includes the **`[otlp-grpc]`** row; **`tests/test_pyproject_dependencies.py`** asserts **`[otlp-grpc]`** alignment with **`[otlp]`** per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6**; optional CI/smoke per **§3.4.4** if maintainers choose it; [CHANGELOG.md](../CHANGELOG.md) **Unreleased** when behavior ships.
-19. **Advanced metrics + `RunSummary` without full `workflow_run_span`** — **§3.5** is satisfied: **`docs/examples/record_run_outcome_run_summary.md`** exists, meets **§3.5** content rules, has runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7**, and README links to the markdown as required there. **§5.5** (**§5.5.1**–**§5.5.4**) stays accurate for **`record_run_outcome`**, **`record_exporter_error`**, and **`generate_run_summary`**. [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7** and **§5** item **6** are satisfied for success/failure metrics without **§6** lifecycle traces from **`workflow_run_span`** and for pairing **`record_run_outcome`** with **`generate_run_summary`** on an integrator-owned span. [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) acceptance criteria **6–7** hold for the non-**`workflow_run_span`** path.
+19. **Optional automatic exporter error metric** — For backlog *Optional automatic `replayt.exporter.errors_total` on export failures via processors*: **§5.5.1** is implemented (explicit opt-in on provider install/build, **off** by default), README documents the flag(s) and double-counting guidance, [SECURITY_REDACTION.md](SECURITY_REDACTION.md) **Exporter health metric** is satisfied for all automatic increments, and [TESTING_SPEC.md](TESTING_SPEC.md) **§4.5** obligations (including processor/reader failure fakes without a real collector) are met; [CHANGELOG.md](../CHANGELOG.md) **Unreleased** records user-visible behavior when shipped.
+20. **Advanced metrics + `RunSummary` without full `workflow_run_span`** — **§3.5** is satisfied: **`docs/examples/record_run_outcome_run_summary.md`** exists, meets **§3.5** content rules, has runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7**, and README links to the markdown as required there. **§5.5** (**§5.5.2**–**§5.5.5**) stays accurate for **`record_run_outcome`**, **`record_exporter_error`**, and **`generate_run_summary`**. [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7** and **§5** item **6** are satisfied for success/failure metrics without **§6** lifecycle traces from **`workflow_run_span`** and for pairing **`record_run_outcome`** with **`generate_run_summary`** on an integrator-owned span. [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) acceptance criteria **6–7** hold for the non-**`workflow_run_span`** path.
 
 ## 9. Related documents
 

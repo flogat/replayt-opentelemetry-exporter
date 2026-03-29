@@ -78,7 +78,16 @@ Automated tests MUST include at least one scenario for **export health** indepen
 
 - **`record_exporter_error`** (or the implementation’s equivalent) records **`replayt.exporter.errors_total`** with a normalized `error_type` per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5.3**, including a case where a non-recommended string is coerced to `unknown`.
 
-If the project later adds automatic export-failure handling inside span processors, extend tests to assert the same metric or documented span signal—update this section in the same change.
+When [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5.5.1** automatic export-failure recording is implemented, tests MUST additionally prove the hook **without a real remote collector**:
+
+| Obligation | Detail |
+| ---------- | ------ |
+| **Fake failure** | Use an in-process **`SpanExporter`** (and, if **§5.5.1** covers metrics, a **`MetricExporter`** or reader setup) that **fails** `export` deterministically, wired through the same **`build_tracer_provider` / `install_tracer_provider`** (and meter equivalents) path integrators use with the opt-in flag **on**. |
+| **Success control** | With the same wiring except the exporter succeeds (or opt-in **off**), assert **`replayt.exporter.errors_total`** does **not** increase for that scenario—so the hook is not firing on every batch or healthy export. |
+| **Normalized label** | On failure, assert exactly one increment (per logical failure the hook owns) with **`error_type`** in the **§5.3** set (matching the implementation’s mapping from the injected failure). |
+| **Default off** | Assert that **default** provider installation (opt-in **off**) does **not** register automatic hooks that change **`errors_total`** compared to pre-**§5.5.1** behavior for the same fake exporter failure **unless** the integrator already called `record_exporter_error` in test setup—i.e. automatic recording is truly opt-in. |
+
+Maintainers MAY satisfy the **`record_exporter_error`** bullet and the **§5.5.1** table in one test module or split them; docstrings MUST cite **§4.5** and, for hook tests, **PUBLIC_API_SPEC §5.5.1**.
 
 ### 4.6 Dependency and matrix hygiene
 
@@ -102,7 +111,7 @@ Tests **MAY** live in existing modules (for example **`tests/test_tracing.py`**)
 The **implementation** backlog for this item is complete when all of the following hold:
 
 1. **§2** acceptance mapping is satisfied by the test tree and CI.
-2. **§4.3–§4.5** minimum scenarios exist and are named or documented in test docstrings referencing the spec sections they lock; **§4.2** contract row is satisfied including [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.4** (`run_with_mock` **and** **`Runner.run`** **or** documented script per that section).
+2. **§4.3–§4.5** minimum scenarios exist and are named or documented in test docstrings referencing the spec sections they lock (including **§4.5** **`record_exporter_error`** coverage and, once **§5.5.1** ships, in-process exporter failure fakes per the **§4.5** table); **§4.2** contract row is satisfied including [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.4** (`run_with_mock` **and** **`Runner.run`** **or** documented script per that section).
 3. **No replayt private API** imports in `tests/` (only public `replayt` symbols and this package’s API).
 4. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **6** remains true: tests cover span lifecycle, §6 attributes/events, success/failure metrics, provider installation, and `__all__` parity as specified there; gaps are tracked under **Unreleased** in [CHANGELOG.md](../CHANGELOG.md) if intentionally deferred.
 5. **Semantic convention identifiers:** Any test that asserts literal span names, lifecycle event names, span attribute keys, metric instrument names, or meter scope strings stays consistent with [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5–§6** and the inventory in **§5.7** / **§6.8**; renames update those tests **in the same change** as the spec, operator runbook (if PromQL or narrative references the old name), and [CHANGELOG.md](../CHANGELOG.md) per **§8** item **15**.
