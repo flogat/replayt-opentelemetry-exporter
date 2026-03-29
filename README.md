@@ -13,7 +13,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
-- **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See the example in **Enable tracing and metrics in development** below.
+- **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below; for **`Runner.run`** (not only `run_with_mock`), see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md).
 
 ### Public surface at a glance
 
@@ -55,6 +55,8 @@ markdown for replayt’s **Workflow**, **Runner**, **RunContext**, and **run_wit
 [`docs/reference-documentation/`](docs/reference-documentation/) (index [README](docs/reference-documentation/README.md)),
 aligned with the replayt pins in [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. Use
 replayt’s PyPI page and installed docstrings for the full upstream story.
+
+**Runner example:** [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md) walks through **`Runner.run`** with **`MockLLMClient`** inside **`workflow_run_span`** (PUBLIC_API_SPEC §3.4).
 
 ## Quick start
 
