@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Phase **3** builder (*Ship first PyPI release and document version / upgrade policy*): **`tests/test_pypi_index.py`** opt-in check (**`VERIFY_PYPI_INDEX=1`**) that **`replayt-opentelemetry-exporter`** on PyPI matches **`[project].version`** in **`pyproject.toml`** ([docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§8** item **17**); README **Releases and PyPI** documents the command.
+
 ### Documentation
 - Phase **2** spec (*Ship first PyPI release and document version / upgrade policy*): [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§1.1** maps the backlog; new **§7.6** defines adapter SemVer, pinning, and when **`__all__`** / telemetry identifiers warrant a **major** bump; **§8** adds checklist item **17**. [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) **§3.1** and **§7** item **6** tie the same backlog to maintainer and review obligations. README **Pinning, SemVer, and breaking changes** and **Public API** summary link integrators to **§7.6** / **§5.7** / **§6.8**.
 

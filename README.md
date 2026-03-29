@@ -162,6 +162,8 @@ Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](do
 
 **Version (strategy B):** The distribution version is **`[project].version`** in **`pyproject.toml`** only. **`replayt_opentelemetry_exporter.__version__`** reads **`importlib.metadata.version("replayt-opentelemetry-exporter")`** so there is no second literal to drift. **`tests/test_version_sync.py`** enforces equality between **`pyproject.toml`**, installed metadata, and **`__version__`**.
 
+**After publish:** To confirm [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§8** item **17** against the live index, run **`VERIFY_PYPI_INDEX=1 pytest tests/test_pypi_index.py -q`**. Default **`pytest`** skips that module so PR CI stays offline-safe until the project exists on PyPI.
+
 **Local build and check** (after `pip install -e ".[dev]"` so **`build`** and **`twine`** are available):
 
 ```bash
