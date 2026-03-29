@@ -181,7 +181,7 @@ Before widening bounds or adding matrix cells for **2.x**, maintainers MUST run 
    - A **table** mapping each touchpoint in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4.1** to **2.x** impact (**breaking** / **deprecated** / **unchanged** / **unknown**) with pointers to upstream release or migration notes.
    - Code locations beyond **`tracing.py`** if the spike reveals additional OpenTelemetry usage (tests, packaging, optional OTLP imports).
    - Test and Ruff outcomes on the spike branch at pinned **2.x** versions.
-   - A explicit **go** / **no-go** / **defer** for widening **`<2`**, per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4.2** (the **no-go** or **defer** path still satisfies the spike backlog when documented—**shipping** widening requires **§7.3** *support* plus **§7.4** matrix rules).
+   - An explicit **go** / **no-go** / **defer** for widening **`<2`**, per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4.2** (the **no-go** or **defer** path still satisfies the spike backlog when documented—**shipping** widening requires **§7.3** *support* plus **§7.4** matrix rules).
 
 The spike proves **feasibility**; **shipping** support still requires **§7.3–7.4**.
 
