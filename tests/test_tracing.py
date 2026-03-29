@@ -69,7 +69,6 @@ def test_build_meter_provider_records_metrics() -> None:
     meter = provider.get_meter("test")
     counter = meter.create_counter("test-counter")
     counter.add(1)
-    reader.collect()
     metrics_data = reader.get_metrics_data()
     assert len(metrics_data.resource_metrics) > 0
 
@@ -591,7 +590,6 @@ def test_public_api_spec_semantic_inventory_matches_tracing() -> None:
         metrics.set_meter_provider(provider)
         record_run_outcome(True, "wf-inv", duration_ms=1.0)
         record_exporter_error("timeout")
-        reader.collect()
         data = reader.get_metrics_data()
         scope_names: set[str] = set()
         instrument_names: set[str] = set()
@@ -621,7 +619,6 @@ def test_workflow_run_span_records_success_metrics() -> None:
             pass
         trace_provider.force_flush()
 
-        reader.collect()
         metrics_data = reader.get_metrics_data()
 
         found_run_counter = False
@@ -654,7 +651,6 @@ def test_workflow_run_span_records_failure_metrics() -> None:
             pass
         trace_provider.force_flush()
 
-        reader.collect()
         metrics_data = reader.get_metrics_data()
 
         found_run_counter = False
@@ -682,7 +678,6 @@ def test_record_exporter_error() -> None:
 
         record_exporter_error("export_failed", workflow_id="wf-123", run_id="run-456")
 
-        reader.collect()
         metrics_data = reader.get_metrics_data()
 
         found_error_counter = False
@@ -712,7 +707,6 @@ def test_record_exporter_error_recommended_types_passthrough(error_type: str) ->
     try:
         metrics.set_meter_provider(provider)
         record_exporter_error(error_type)
-        reader.collect()
         metrics_data = reader.get_metrics_data()
         found = False
         for rm in metrics_data.resource_metrics:
@@ -735,7 +729,6 @@ def test_record_exporter_error_coerces_non_recommended_to_unknown() -> None:
     try:
         metrics.set_meter_provider(provider)
         record_exporter_error("custom_vendor_code_500")
-        reader.collect()
         metrics_data = reader.get_metrics_data()
         found = False
         for rm in metrics_data.resource_metrics:
@@ -763,7 +756,6 @@ def test_duration_histogram_records_values() -> None:
             pass
         trace_provider.force_flush()
 
-        reader.collect()
         metrics_data = reader.get_metrics_data()
 
         found_duration_histogram = False
@@ -772,6 +764,11 @@ def test_duration_histogram_records_values() -> None:
                 for metric in sm.metrics:
                     if metric.name == "replayt.workflow.run.duration_ms":
                         found_duration_histogram = True
+                        assert metric.data.data_points, (
+                            "replayt.workflow.run.duration_ms has no data points "
+                            "(avoid calling InMemoryMetricReader.collect() before "
+                            "get_metrics_data(); the latter already collects)"
+                        )
                         for data_point in metric.data.data_points:
                             assert data_point.attributes.get("workflow_id") == "wf-123"
                             assert data_point.attributes.get("outcome") == "success"
@@ -845,7 +842,6 @@ def test_record_run_outcome_metrics_without_workflow_run_span(
             run_id=run_id,
             duration_ms=duration_ms,
         )
-        reader.collect()
         metrics_data = reader.get_metrics_data()
 
         found_counter = False
@@ -914,7 +910,6 @@ def test_record_run_outcome_paired_with_generate_run_summary_integrator_span() -
         datetime.fromisoformat(summary.start_time)
         datetime.fromisoformat(summary.end_time)
 
-        metric_reader.collect()
         metrics_data = metric_reader.get_metrics_data()
         found_counter = False
         for rm in metrics_data.resource_metrics:
