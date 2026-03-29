@@ -65,13 +65,15 @@ The backlog item *Add CI with ruff, tests, and readable logs* is satisfied for *
 
 Implementing or adjusting workflow YAML is **Builder** work; [CI_SPEC.md](CI_SPEC.md) **§5** is the checklist.
 
-The backlog item *Expand CI matrix with optional Python 3.11 job* is satisfied for **documentation** when:
+The backlog item *Expand CI matrix with optional Python 3.11 job* is **superseded** for merge-gate expectations by *Expand CI matrix to include Python 3.11 (requires-python parity)* below. [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** records the historical transitional layout only.
+
+The backlog item *Expand CI matrix to include Python 3.11 (requires-python parity)* is satisfied for **documentation** when:
 
 | Backlog acceptance criterion | Where it is specified |
 | ---------------------------- | -------------------- |
-| **3.11** exercised without turning the PR matrix into eight cells | [CI_SPEC.md](CI_SPEC.md) **§2.2**, **§3.6**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**, **§4.3** |
-| Same Ruff and pytest commands as the merge gate, on a documented pin set | [CI_SPEC.md](CI_SPEC.md) **§3.1**, **§3.6**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** |
-| Triggers and “required vs informational” clarity for maintainers | README **Version compatibility** / **Running tests**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** |
+| **Declared** Python (`requires-python`) vs **tested** minors (merge gate) are explicit | README **Version compatibility**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**–**§4.2** item **4**; **§7.2**–**§7.3** here |
+| **3.11** runs the **same** four replayt×OpenTelemetry cells as **3.12** on **`push` / `pull_request`** | [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**; [CI_SPEC.md](CI_SPEC.md) **§2.2**, **§3.6** |
+| Ruff and pytest invocations match README / **§3.1** on every cell (no `CONTRIBUTING.md` in repo) | [CI_SPEC.md](CI_SPEC.md) **§3.1**, **§2.2** (contributor surface); README **Running tests and lint locally** |
 
 Workflow YAML, **`tests/test_ci_workflow.py`**, and CHANGELOG when behavior ships are **Builder** work; **§8** item **14** is the implementation checklist.
 
@@ -427,8 +429,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 ### 7.2 Tested / documented matrix (maintenance obligation)
 
-- CI job **`.github/workflows/ci.yml`** **`test`** runs a **four-cell matrix** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell.
-- Job **`test-python-3-11`** runs on **Python 3.11** with one documented pin set ([COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3**), on **`schedule`** and **`workflow_dispatch`** only; details are in [CI_SPEC.md](CI_SPEC.md) **§3.6**.
+- CI job **`.github/workflows/ci.yml`** **`test`** runs the replayt×OpenTelemetry **four-cell** matrix on **Python 3.11** and **3.12** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell (**requires-python parity** on the merge gate).
 - **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until README and the compatibility matrix claim a different line.
 - **Deep snapshot:** **`docs/reference-documentation/`** holds version-stamped notes for those symbols aligned to matrix pins ([REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)); integrators should still treat [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§2** as the normative seam for *this* package.
 - When this repository claims support for a specific replayt line in README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md), update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
@@ -439,7 +440,7 @@ Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` a
 
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
-| Python | `requires-python` (currently `>=3.11`) | Merge gate: job **`test`** on **3.12**. Supplemental smoke: job **`test-python-3-11`** on **3.11** per [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3**. |
+| Python | `requires-python` (currently `>=3.11`) | **Declared** floor **3.11**. **Merge gate:** full four-cell matrix on **3.11** and **3.12** ([COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**). |
 | OpenTelemetry API/SDK | `>=1.20.0,<2` | **1.x** supported within this range. **2.x** stays **out of scope** until [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied (**§7.2** spike or audit, **§7.3** outcomes, **§7.4** before new CI cells). |
 | replayt | `>=0.4.0` | Upper cap **TODO** until a known-breaking replayt release is identified and tested. |
 | Tested replayt (CI) | Matrix cells **0.4.0** and **latest** | See [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. |
@@ -473,7 +474,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 11. **Runner-based integration example** — **§3.4** is satisfied: **`docs/examples/runner_workflow_run_span.md`** exists, meets **§2.2.1** / **§3.4** content and public-API rules, has **§3.4** runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**, and README links to the markdown as required there.
 12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: **§7.2** either full spike (**steps 1–3**) when **2.x** is on PyPI **or** step **0** PyPI audit recorded when **2.x** is absent; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, this document **§7.4** and README accurate); if **support**: CI matrix meets that document **§7.4** and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** pins align with API/SDK.
 13. **Release engineering** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** is satisfied: one **§6.1** version strategy, README **Releases** entry, **tag-gated** publish workflow with **trusted publishing**, documented **`build` + `twine check`**, **CHANGELOG** alignment (**§6.3**), and a **§6.4** drift guardrail (or documented waiver).
-14. **Supplemental Python 3.11 CI** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.3** and [CI_SPEC.md](CI_SPEC.md) **§3.6** are satisfied: job **`test-python-3-11`** uses **§3.1**-equivalent Ruff and pytest steps after the documented pin set; **`schedule`** and **`workflow_dispatch`** are present (or any **push** / **pull_request** behavior is documented in README and **§4.3**); **§7.2** here and README **Version compatibility** stay aligned.
+14. **Python 3.11 requires-python parity** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** and [CI_SPEC.md](CI_SPEC.md) **§3.6**: merge gate runs the **full** replayt×OpenTelemetry matrix on **3.11** and **3.12**; Ruff + pytest match **§3.1** and README on every row; **§7.2**–**§7.3** here and README **Version compatibility** stay aligned (**declared vs tested**).
 15. **Semantic conventions inventory** — **§5.7** and **§6.8** stay accurate for shipped metrics, resource attributes, span names, lifecycle events, and span attribute keys; any rename or new canonical identifier updates **§5–§6**, **§5.7**, **§6.8**, [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) when PromQL examples are affected, README **Metrics** / trace verification when user-facing, tests per [TESTING_SPEC.md](TESTING_SPEC.md) **§5**, and [CHANGELOG.md](../CHANGELOG.md) per the stability rules in **§6.8**.
 16. **Changelog and milestone hygiene** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§9** is satisfied for the release line in scope: CHANGELOG **cut** and **compare** expectations (**§9.2.1–§9.2.2**), README vs shipped tracing/metrics (**§9.2.3**), **Upgrading** / adoption notes from **0.1.0** and any renames (**§9.2.4**), version consistency (**§9.2** item **5**), and milestone policy (**§9.3**) when applicable. **Evidence for 0.2.0:** **[CHANGELOG.md](../CHANGELOG.md)** `[0.2.0]` includes the GitHub compare link and **Upgrading from 0.1.0**; README **Releases and PyPI** states milestones are unused (**§9.3** N/A); README **Metrics** / tracing steps match **§5–§6** and `src/replayt_opentelemetry_exporter/tracing.py` at **`[project].version` 0.2.0** (Builder phase 3, backlog *Changelog and milestone hygiene for 0.2.0*).
 
