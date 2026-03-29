@@ -65,10 +65,11 @@ Concrete outcomes we optimize for:
    invoking Ruff as a module). See [CI_SPEC.md](CI_SPEC.md) **§3.1** if paths change.
 3. **Documented runbook** — The README describes how to enable the exporter and verify spans (and, when shipped,
    metrics) in a dev environment—operators and integrators should not need to read source to get a first successful
-   export.
+   export. Production-style **dashboards and alerts** for canonical metrics are specified in **[OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md)** and delivered as **`docs/OPERATOR_RUNBOOK.md`** (see that spec **§3**).
 4. **Aligned docs** — Mission, **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)**,
    **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)**,
    **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)**,
+   **[OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md)**,
    **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)**,
    **[CI_SPEC.md](CI_SPEC.md)**, and
    **[TESTING_SPEC.md](TESTING_SPEC.md)** stay consistent on consumer-side maintenance, ecosystem role, the
