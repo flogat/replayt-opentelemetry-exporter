@@ -46,6 +46,16 @@ The backlog body asks to extend **CI or docs** for OTLP transport choice. Normat
 
 If maintainers add an optional CI step, README **CI entry point** SHOULD mention it when it becomes part of the documented contributor story; default remains **§3.1** Ruff + pytest only.
 
+### 2.4 Backlog — *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)*
+
+Optional automation that exercises **OpenTelemetry Python 2.x** candidates is **normative** only as described in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.5**: it MUST **not** replace or gate the merge-blocking job **`test`** until **§7.3–7.4** there authorize **2.x** support.
+
+| Expectation | Normative requirement |
+| ----------- | --------------------- |
+| **Non-blocking** | Workflow or job runs on **`workflow_dispatch`** and/or **`schedule`**, **or** on **`pull_request`** only when an explicit condition prevents it from being a **required** check (document the condition in README **Version compatibility** or **§7.2** findings). |
+| **Commands** | Same **§3.1** order: install + pins, optional resolved-version print, **Ruff** lint, **Ruff** format check, **`pytest`** (full suite unless a narrower spike scope is documented with rationale in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** step **3**—default is **full** suite). |
+| **Discoverability** | README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** names the workflow path and how maintainers trigger it. |
+
 ## 3. Normative CI behavior
 
 ### 3.1 Commands (Ruff and pytest)
@@ -99,7 +109,7 @@ When `[project].requires-python` is **`>=3.11`** and maintainers also test a **n
 | Document | Role |
 | -------- | ---- |
 | [TESTING_SPEC.md](TESTING_SPEC.md) | What pytest must prove; local vs CI parity for **tests**. |
-| [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) | Matrix dimensions, pins, and **which** dependency versions each cell exercises. **OpenTelemetry 2.x** cells are **forbidden** until that spec **§7** (spike, docs, gating) is satisfied—expand the workflow only after those obligations are met. |
+| [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) | Matrix dimensions, pins, and **which** dependency versions each cell exercises. **OpenTelemetry 2.x** merge-gate cells are **forbidden** until that spec **§7** (spike, docs, **§7.4** gating) is satisfied; optional **non-blocking** **2.x** jobs follow **§7.5** and **§2.4** here. |
 | **This document** | **How** CI presents commands, steps, exit codes, and safe logs for Ruff + pytest. |
 
 ## 5. Builder acceptance checklist
@@ -118,7 +128,7 @@ The **implementation** backlog for *Add CI with ruff, tests, and readable logs* 
 
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — **Observable automation**.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands and CI parity for **test behavior**.
-- [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — matrix and pins.
+- [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — matrix and pins; **§7.5** optional non-blocking **OpenTelemetry 2.x** jobs (**§2.4** here).
 - [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — **tag-gated** PyPI publish workflow (separate from this spec’s PR **`test`** job); **OIDC** permissions live on the publish workflow, not a reason to broaden **`test`** secrets.
 - [README.md](../README.md) — contributor commands and CI pointer.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing notes when CI behavior or commands change.

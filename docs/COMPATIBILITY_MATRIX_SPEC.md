@@ -151,14 +151,15 @@ Maintainers MAY append dated rows when changing bounds:
 | Phase | Criterion |
 | ----- | --------- |
 | **Spec (phase 2)** — *Add compatibility matrix and dependency pins* | This document exists; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §7 and README link here; backlog mapping appears in PUBLIC_API_SPEC §1.1; CHANGELOG **Unreleased** notes the spec. |
-| **Spec (phase 2)** — *Validate OpenTelemetry 2.x and document policy* | **§7** (spike, documentation outcomes, CI gating); **§3.3** and **§4** reference **§7** where relevant; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps the backlog and **§7.4** states integrator-facing **1.x** / **2.x** policy; CHANGELOG **Unreleased** notes the spec pass. |
+| **Spec (phase 2)** — *Validate OpenTelemetry 2.x and document policy* | **§7** (spike, documentation outcomes, CI gating); **§3.3** and **§4** reference **§7** where relevant; **§7.6** acceptance summary; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps the backlog and **§7.4** states integrator-facing **1.x** / **2.x** policy; CHANGELOG **Unreleased** notes the spec pass. |
+| **Spec (phase 2)** — *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)* | [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1**, **§7.4.1** (touchpoint inventory), **§7.4.2** (go/no-go), **§8** item **12** cross-link; **§7.2** step **3** (findings artifact); **§7.5** (non-blocking automation); [CI_SPEC.md](CI_SPEC.md) **§2.4**; CHANGELOG **Unreleased** notes the spec pass. |
 | **Spec (phase 2)** — *Expand CI matrix with optional Python 3.11 job* | Historical: merge-gate policy superseded by *Expand CI matrix to include Python 3.11 (requires-python parity)*; **§4.3** records the old supplemental job. |
 | **Spec (phase 2)** — *Expand CI matrix to include Python 3.11 (requires-python parity)* | **§4.1** merge-blocking **3.11** + **3.12** × four replayt×OTel cells; **§4.2** item **4**; **§4.3** historical supplemental job; [CI_SPEC.md](CI_SPEC.md) **§2.2**, **§3.6**, **§5** items **6–7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** / **§8** item **14**; README **Version compatibility** (**declared vs tested**); CHANGELOG **Unreleased** notes this spec pass. |
 | **Spec (phase 2)** — *Add optional `[otlp-grpc]` extra and README example for gRPC exporters* | **§3.4** (extras, README content, optional CI); [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** / **§8** item **18**; [CI_SPEC.md](CI_SPEC.md) **§2.3**; [TESTING_SPEC.md](TESTING_SPEC.md) **§4.6**; CHANGELOG **Unreleased** notes this spec pass. |
 | **Builder (phase 3+)** — matrix / pins backlog | Matrix table populated per **§2**; `pyproject.toml` bounds match table; justifications per **§3**; CI matrix per **§4.2**; CHANGELOG records dependency-facing changes. |
 | **Builder (phase 3+)** — *Add optional `[otlp-grpc]` extra and README example for gRPC exporters* | **`[otlp-grpc]`** in `pyproject.toml` per **§3.4.2**; README **§3.4.3**; **Version compatibility** table row; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§8** item **18**; bound check in **`tests/test_pyproject_dependencies.py`** per **§3.4.4**; optional CI/smoke per **§3.4.4**; CHANGELOG **Unreleased** when shipping. |
 | **Builder (phase 3+)** — *Expand CI matrix to include Python 3.11 (requires-python parity)* | Job **`test`** implements **§4.1** (eight matrix rows); **`test-python-3-11`** removed per **§4.3**; README **CI / validation** column; **`tests/test_ci_workflow.py`**; Ruff + pytest match **[CI_SPEC.md](CI_SPEC.md) §3.1** and README; CHANGELOG **Unreleased** when behavior ships. |
-| **Builder (phase 3+)** — *OpenTelemetry 2.x* | **§7.5** Builder row. |
+| **Builder (phase 3+)** — *OpenTelemetry 2.x* | **§7.6** Builder row. |
 
 ## 7. OpenTelemetry 2.x validation, policy, and CI gating
 
@@ -176,7 +177,11 @@ Before widening bounds or adding matrix cells for **2.x**, maintainers MUST run 
 0. **Prerequisite — published packages:** If **no** `opentelemetry-api` / `opentelemetry-sdk` **2.x** release or pre-release is available on **PyPI**, the install step below is **blocked**. A **Builder** pass MUST still record that audit (tooling used, date, and outcome: no installable **2.x**) in this section or **§5**, keep the **`<2`** cap, and treat **§7.3** *explicit exclusion* as satisfied until **2.x** appears—then run steps **1–3** before claiming support.
 1. **Installs** OpenTelemetry **2.x** for API and SDK (and, if validating export paths, the matching **2.x** OTLP **HTTP** and **gRPC** exporter versions when those extras are declared) using **published** packages—**pre-release** wheels are acceptable when **stable 2.x** is not yet on PyPI, provided the spike documents the exact versions used.
 2. **Runs** the same quality gates this repository expects for a merge candidate: **Ruff** lint, **Ruff** format check, and **full `pytest`** from the repository root (same invocations as [CI_SPEC.md](CI_SPEC.md) **§3.1**), after reconciling any **code** changes required for API or semantic-convention differences.
-3. **Records** findings: breaking API changes, deprecated patterns in `src/`, test adjustments, and any integrator-facing migration notes.
+3. **Records** findings in a **single maintainer-facing artifact** (PR description, section in this document, or linked doc under **`docs/`**—pick one and link it from **§5** when not inline):
+   - A **table** mapping each touchpoint in [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4.1** to **2.x** impact (**breaking** / **deprecated** / **unchanged** / **unknown**) with pointers to upstream release or migration notes.
+   - Code locations beyond **`tracing.py`** if the spike reveals additional OpenTelemetry usage (tests, packaging, optional OTLP imports).
+   - Test and Ruff outcomes on the spike branch at pinned **2.x** versions.
+   - A explicit **go** / **no-go** / **defer** for widening **`<2`**, per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§7.4.2** (the **no-go** or **defer** path still satisfies the spike backlog when documented—**shipping** widening requires **§7.3** *support* plus **§7.4** matrix rules).
 
 The spike proves **feasibility**; **shipping** support still requires **§7.3–7.4**.
 
@@ -197,11 +202,20 @@ After the spike, the **merge** that claims **2.x** support (or the decision **no
 - When **2.x** is supported, matrix cells MUST include at least **one** pinned **2.x** API/SDK pair (same version for both) in addition to existing **1.x** coverage **unless** this spec is amended to document a deliberate narrower claim (e.g. “2.x-only drop 1.x” in a semver-major release)—that amendment MUST appear in **§4.1** / **§2** and in [CHANGELOG.md](../CHANGELOG.md).
 - Resolved-version logging (**§4.2** item 2) MUST include **`opentelemetry-api`** and **`opentelemetry-sdk`** for every **new** 2.x cell.
 
-### 7.5 Acceptance criteria summary (this backlog)
+### 7.5 Non-merge-blocking OpenTelemetry 2.x automation (readiness spike)
+
+Backlog *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)* allows **early signal** on **2.x** candidates **without** widening the PR **merge gate** before **§7.3–7.4** are satisfied.
+
+- **Purpose** — Run **Ruff** + **full `pytest`** (same invocations as [CI_SPEC.md](CI_SPEC.md) **§3.1**) against a **pinned** **2.x** `opentelemetry-api` / `opentelemetry-sdk` pair (and matching OTLP extras if exercised) on **`workflow_dispatch`**, **`schedule`**, and/or **`pull_request`** with an explicit **`if`** / path filter so **failed** runs **do not** block merges—**or** document an equivalent **manual** branch procedure in **§7.2** findings when CI is deferred.
+- **Forbidden until justified** — Treating **2.x** green runs as **supported** in README, **`pyproject.toml`**, or the **§4.1** merge matrix **without** **§7.3** documentation and **§7.4** matrix rules.
+- **Naming** — Workflow or job id SHOULD name OpenTelemetry **2.x** explicitly (e.g. **`otel-2x-spike`**) so logs are auditable; see [CI_SPEC.md](CI_SPEC.md) **§2.4**.
+- **Pins** — The workflow MUST print resolved **`opentelemetry-api`**, **`opentelemetry-sdk`**, and **`replayt`** versions for the row (same style as job **`test`**).
+
+### 7.6 Acceptance criteria summary (this backlog)
 
 | Phase | Criterion |
 | ----- | --------- |
-| **Spec (phase 2)** | **§7** exists with spike workflow, documentation outcomes table, and CI gating; **§3.3** references **§7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps this backlog; **§7.4** there states integrator-facing **1.x** / **2.x** policy and cross-links here. |
+| **Spec (phase 2)** | **§7** exists with spike workflow, documentation outcomes table, CI gating, and **§7.5** non-blocking **2.x** automation rules; **§3.3** references **§7**; [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§1.1** maps this backlog and the *readiness spike* backlog; **§7.4** / **§7.4.1–7.4.2** there state integrator policy, **`tracing.py`** touchpoints, and **go/no-go**; cross-links match [CI_SPEC.md](CI_SPEC.md) **§2.4**. |
 | **Builder (phase 3+)** | **§7.2** satisfied: full spike (**1–3**) when **2.x** is on PyPI, **or** **§7.2** step **0** audit recorded when **2.x** is absent; **§7.3** satisfied for support or exclusion; if support: `pyproject.toml`, CI matrix per **§7.4**, README, CHANGELOG, and tests green on claimed bounds; if exclusion: docs and rationale per **§7.3** without widening `<2`. |
 
 ## 8. Related documents
@@ -209,6 +223,6 @@ After the spike, the **merge** that claims **2.x** support (or the decision **no
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — §7 version snapshot; public API and seam; OpenTelemetry 2.x policy cross-link.
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — **`docs/reference-documentation/`** version-stamped snapshots; replayt lines MUST match **§4.1** pins.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands, CI parity, **§4.6** dependency bound checks, and what the suite must prove at the replayt boundary.
-- [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest; matrix pins follow **§4** / **§7** here.
+- [CI_SPEC.md](CI_SPEC.md) — readable CI steps and safe logs for Ruff + pytest; matrix pins follow **§4** / **§7** here; **§2.4** for optional non-blocking **2.x** jobs.
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — explicit contracts and consumer-side maintenance.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing dependency and validation notes.
