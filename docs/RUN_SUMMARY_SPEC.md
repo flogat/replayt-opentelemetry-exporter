@@ -68,4 +68,4 @@ The example should demonstrate all required fields and show how redaction is app
 - Do not implement new public APIs; use existing `generate_run_summary` and `RunSummary`.
 - Ensure the summary is human-readable and suitable for PMs/support.
 - Tests should verify the JSON output matches the schema and redaction rules.
-- For metrics without **`workflow_run_span`**, follow [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7** and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.5** / **§5.5**; acceptance criteria **6–7** above apply when that path ships.
+- For metrics without **`workflow_run_span`**, follow [TESTING_SPEC.md](TESTING_SPEC.md) **§4.7** and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.5** / **§5.5**; acceptance criteria **6–7** above describe this path.
