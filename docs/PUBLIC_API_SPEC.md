@@ -206,9 +206,9 @@ The importable package is **`replayt_opentelemetry_exporter`**. The following sy
 | ------ | ---- |
 | `__version__` | Package version string. |
 | `build_resource` | Build `Resource` for tracer/meter providers (service name, optional extra attributes). |
-| `build_tracer_provider` | Construct `TracerProvider` with optional `SpanExporter` list (no global side effects). |
-| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). |
-| `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. |
+| `build_tracer_provider` | Construct `TracerProvider` with optional `SpanExporter` list (no global side effects). Optional keyword **`record_exporter_errors_on_export_failure`** (default **false**) enables **§5.5.1** automatic `replayt.exporter.errors_total` recording on span export failure; see README for usage and ordering with the meter provider. |
+| `build_meter_provider` | Construct `MeterProvider` with optional `MetricExporter` list (wrapped in periodic readers) and/or optional `MetricReader` list attached as-is—for example `InMemoryMetricReader` in tests (no global side effects). Optional **`record_exporter_errors_on_export_failure`** (default **false**) and **`metric_export_interval_millis`** (passed to **`PeriodicExportingMetricReader`** when exporters are present) are defined in **§5.5.1** and README. |
+| `install_tracer_provider` | Install tracer provider on the global `opentelemetry.trace` API. Accepts the same options as `build_tracer_provider`, including **§5.5.1** opt-in flags. |
 | `install_meter_provider` | Install meter provider on the global `opentelemetry.metrics` API. Accepts the same exporter/reader options as `build_meter_provider`. |
 | `get_workflow_tracer` | Return a `Tracer` from the **currently installed** global tracer provider, using a **stable instrumentation scope name** (implementation-defined string that MUST stay stable across minor releases—see §3.1). |
 | `workflow_run_span` | Context manager: one OpenTelemetry span for a single workflow run, with metrics side effects as specified in §4. |
