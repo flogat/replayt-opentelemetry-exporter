@@ -1,6 +1,6 @@
 [project]
 name = "replayt-opentelemetry-exporter"
-version = "0.1.0"
+version = "0.2.0"
 description = "OpenTelemetry traces and metrics for replayt workflow runs: Python project using replayt; see docs for scope."
 requires-python = ">=3.11"
 dependencies = [
@@ -11,6 +11,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2.0",
+  "twine>=5.0",
   "pytest>=8.0",
   "pyyaml>=6.0",
   "ruff>=0.6.0",

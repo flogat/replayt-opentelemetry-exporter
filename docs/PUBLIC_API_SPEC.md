@@ -95,6 +95,16 @@ The backlog item *Document operator dashboards for canonical metrics* is satisfi
 
 Authoring **`docs/OPERATOR_RUNBOOK.md`** and README links is **Builder** work; this §1.1 row is the documentation contract.
 
+The backlog item *Release engineering: PyPI publish and version sync* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Repeatable release steps (tag, build, upload) and **CHANGELOG** / version discipline | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§4**, **§6.3** |
+| **Single source of truth** for distribution version and **`__version__`** | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§6**; **§3** here (`__version__` export) |
+| **Tag-gated** GitHub Actions with **trusted publishing** | [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§5.2**, **§7**; **`.github/workflows/publish-pypi.yml`** |
+
+Implementing **`pyproject.toml` / `__init__.py` changes**, **`python -m build`**, **twine**, **publish workflow YAML**, and **drift tests** is **Builder** work; this §1.1 row and [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** are the contracts.
+
 ## 2. Replayt integration seam
 
 ### 2.1 What this package owns
@@ -376,7 +386,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 ### 7.3 Compatibility snapshot (copy for releases)
 
-Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` at spec time; **maintainers update this table** when bounds change.
+Values below mirror `[project]` / `[project.dependencies]` in `pyproject.toml` at spec time; **maintainers update this table** when bounds change. **Version bump procedure**, **tag naming**, **CHANGELOG** cut lines, and **PyPI** publish steps are normative in **[RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md)** (keep **§7.3** aligned with **`[project].version`** when releasing).
 
 | Component | Declared bound | Notes |
 | --------- | ---------------- | ----- |
@@ -413,6 +423,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 10. **Replayt reference docs** — [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) is satisfied: **`docs/reference-documentation/README.md`** indexes version-stamped snapshots for **Workflow**, **Runner**, **RunContext**, and **run_with_mock** per matrix replayt pins; README and **REPLAYT_ECOSYSTEM_IDEA.md** link per that spec **§5**.
 11. **Runner-based integration example** — **§3.4** is satisfied: **`docs/examples/runner_workflow_run_span.md`** exists, meets **§2.2.1** / **§3.4** content and public-API rules, has **§3.4** runnability via script **or** pytest per [TESTING_SPEC.md](TESTING_SPEC.md) **§4.2**, and README links to the markdown as required there.
 12. **OpenTelemetry 2.x** — [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied: **§7.2** either full spike (**steps 1–3**) when **2.x** is on PyPI **or** step **0** PyPI audit recorded when **2.x** is absent; **§7.3** documentation outcome for **support** (bounds, matrix, README, CHANGELOG, **§7** here including **§7.3** snapshot) **or** **exclusion** (rationale recorded, this document **§7.4** and README accurate); if **support**: CI matrix meets that document **§7.4** and **full pytest** passes on at least one **2.x** cell; **`tests/test_pyproject_dependencies.py`** (or successor) matches declared bounds; optional **`[otlp]`** pins align with API/SDK.
+13. **Release engineering** — [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) **§7** is satisfied: one **§6.1** version strategy, README **Releases** entry, **tag-gated** publish workflow with **trusted publishing**, documented **`build` + `twine check`**, **CHANGELOG** alignment (**§6.3**), and a **§6.4** drift guardrail (or documented waiver).
 
 ## 9. Related documents
 
@@ -425,3 +436,4 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (**§8** item **13**).

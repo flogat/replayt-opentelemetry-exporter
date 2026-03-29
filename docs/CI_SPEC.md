@@ -84,5 +84,6 @@ The **implementation** backlog for *Add CI with ruff, tests, and readable logs* 
 - [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) — **Observable automation**.
 - [TESTING_SPEC.md](TESTING_SPEC.md) — pytest commands and CI parity for **test behavior**.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — matrix and pins.
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — **tag-gated** PyPI publish workflow (separate from this spec’s PR **`test`** job); **OIDC** permissions live on the publish workflow, not a reason to broaden **`test`** secrets.
 - [README.md](../README.md) — contributor commands and CI pointer.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing notes when CI behavior or commands change.
