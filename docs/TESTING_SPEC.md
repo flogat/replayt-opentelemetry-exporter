@@ -96,5 +96,6 @@ The **implementation** backlog for this item is complete when all of the followi
 - [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) — run boundary, metrics, lifecycle, §8 Builder checklist.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) — CI matrix and local reproduction.
 - [CI_SPEC.md](CI_SPEC.md) — Ruff + pytest workflow steps, failure surfacing, CI log hygiene.
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — optional **version drift** tests; placement per that document **§6.4**.
 - [README.md](../README.md) — contributor commands.
 - [CHANGELOG.md](../CHANGELOG.md) — release-facing notes when test obligations change.

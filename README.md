@@ -13,6 +13,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **Specification:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) — stable exports (`__all__`), replayt integration seam, run-boundary semantics, OTel metric names, version expectations, and testable acceptance criteria.
 - **Testing contract:** [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) — pytest commands, success/failure/exporter-error scenarios, in-memory fakes, replayt public-surface-only rule, and CI parity.
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
+- **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — version single source of truth, changelog alignment, tag-gated PyPI publish (trusted publishing); **Builder** backlog — see that spec **§7**.
 - **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below. For a **`Runner.run`** walk-through with **`MockLLMClient`**, see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md).
 
 ### Public surface at a glance
@@ -145,6 +146,12 @@ Canonical **instrument names**, types, and semantics are defined in **[docs/PUBL
 
 Normative checklist and backlog mapping: **[docs/OPERATOR_MONITORING_SPEC.md](docs/OPERATOR_MONITORING_SPEC.md)**.
 
+## Releases and PyPI (maintainers)
+
+**Normative spec:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), **`python -m build`** + **`twine check`**, **tag** naming (**§6.2**), **CHANGELOG** cut rules (**§6.3**), and **GitHub Actions** sketch for **OIDC trusted publishing** (**§5.2**). The package name on PyPI is **`replayt-opentelemetry-exporter`** (from **`pyproject.toml`** **`[project].name`**).
+
+**Status:** Publish automation and version-strategy consolidation are **not** implemented in the spec-only phase; follow **PUBLIC_API_SPEC.md §8** item **13** for the Builder acceptance checklist.
+
 ## Security considerations
 
 - **Transport and endpoints** — In production, point OTLP at an **HTTPS** collector URL (for example via `OTEL_EXPORTER_OTLP_ENDPOINT`). Plain HTTP is only appropriate on trusted local networks. Follow your OpenTelemetry distro's docs for TLS, mTLS, and proxies.
@@ -169,6 +176,7 @@ team's tooling.
 | `docs/COMPATIBILITY_MATRIX_SPEC.md` | Compatibility matrix, dependency pin justification, CI validation policy |
 | `docs/TESTING_SPEC.md` | Pytest strategy, replayt boundary and exporter-error test obligations |
 | `docs/CI_SPEC.md` | CI step naming, Ruff + pytest commands, exit codes, safe logs |
+| `docs/RELEASE_ENGINEERING_SPEC.md` | PyPI publish, version sync, tag-gated trusted publishing, changelog alignment |
 | `docs/OPERATOR_MONITORING_SPEC.md` | Operator dashboards/alerts spec for §5 metrics |
 | `docs/OPERATOR_RUNBOOK.md` | Operator PromQL/Grafana/alert guidance for canonical metrics |
 | `docs/REFERENCE_DOCUMENTATION_SPEC.md` | Spec for bounded replayt public-surface snapshots under `docs/reference-documentation/` |
