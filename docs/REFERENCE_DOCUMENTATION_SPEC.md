@@ -8,7 +8,7 @@ It aligns with **[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md)** (**Explicit cont
 
 - **Integrators** can read **bounded** descriptions of replayt’s **workflow/run** public API next to this package’s specs, offline and without spelunking PyPI or site-packages.
 - **Maintainers** refresh snapshots when matrix pins or **`[project.dependencies]`** replayt bounds change, with an obvious audit trail (version + date in-tree).
-- **Contributors / agents** use the folder as **optional** context; it is **not** required to build or test the exporter unless a future workflow explicitly adds a guard (out of scope for this spec unless **[TESTING_SPEC.md](TESTING_SPEC.md)** is extended later).
+- **Contributors / agents** use the folder as offline context. **`tests/test_reference_documentation.py`** asserts index links, stamp format, and the primary symbol names per **§2–§4** (contract guard, not a substitute for reading upstream docstrings).
 
 ## 2. Location and shape
 
@@ -93,7 +93,7 @@ When **[COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)** **§4.1** 
 
 ## 5. Repository links (normative)
 
-When implemented:
+These links MUST stay in place after Builder delivery; update them if paths or section anchors move.
 
 | Location | Obligation |
 | -------- | ---------- |
@@ -106,7 +106,7 @@ When implemented:
 | Phase | Criterion |
 | ----- | --------- |
 | **Spec (phase 2)** | This document exists; **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md)** **§1.1** maps the backlog here; **[README.md](../README.md)** and **[REPLAYT_ECOSYSTEM_IDEA.md](REPLAYT_ECOSYSTEM_IDEA.md)** are updated to link **this spec** (README already MAY mention the folder—after Builder, links MUST match **§5**). |
-| **Builder (phase 3+)** | **`docs/reference-documentation/README.md`** exists; curated content satisfies **§3** and **§4**; optional **`scripts/`** regenerator satisfies **§2.3** mode B if used; README + ecosystem doc links satisfy **§5**; **[CHANGELOG.md](../CHANGELOG.md)** notes user-visible documentation delivery. |
+| **Builder (phase 3+)** | **`docs/reference-documentation/README.md`** exists; curated content satisfies **§3** and **§4**; optional **`scripts/`** regenerator satisfies **§2.3** mode B if used; README + ecosystem doc links satisfy **§5**; **`tests/test_reference_documentation.py`** (or equivalent) guards the contract; **[CHANGELOG.md](../CHANGELOG.md)** notes user-visible documentation delivery. |
 
 ## 7. Related documents
 
