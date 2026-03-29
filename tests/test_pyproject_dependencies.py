@@ -43,6 +43,24 @@ def test_installed_version_satisfies_pyproject_runtime_spec(package: str) -> Non
     )
 
 
+def test_replayt_specifier_open_upper_matches_ci_latest_row() -> None:
+    """COMPATIBILITY_MATRIX_SPEC §3.3 / §8.3: no replayt cap until §8.2; merge gate uses latest.
+
+    Job ``test`` reinstalls ``replayt`` with ``latest``; declared bounds must still admit
+    a high line so matrix cells stay valid integrator stories. When §8.2 adds an upper
+    bound, replace this with §8.4 checks (minimum contained, representative excluded
+    version not contained) and adjust CI per §8.3 if ``latest`` would fall outside.
+    """
+    by_name = _requirement_by_name()
+    spec = by_name["replayt"].specifier
+    assert Version("0.4.0") in spec
+    sentinel = Version("999999.0.0")
+    assert sentinel in spec, (
+        "replayt has an upper cap; extend tests per COMPATIBILITY_MATRIX_SPEC §8.4 and "
+        "align README, PUBLIC_API_SPEC §7.3, and CI matrix per §8.3."
+    )
+
+
 def test_pyproject_declares_replayt_otel_lower_and_otel_upper_bounds() -> None:
     """Lock documented policy: replayt floor, OpenTelemetry 1.x line with <2 cap."""
     by_name = _requirement_by_name()
