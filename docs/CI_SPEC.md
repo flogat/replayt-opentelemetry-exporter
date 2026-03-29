@@ -54,7 +54,7 @@ Optional automation that exercises **OpenTelemetry Python 2.x** candidates is **
 | ----------- | --------------------- |
 | **Non-blocking** | Workflow or job runs on **`workflow_dispatch`** and/or **`schedule`**, **or** on **`pull_request`** only when an explicit condition prevents it from being a **required** check (document the condition in README **Version compatibility** or **§7.2** findings). |
 | **Commands** | Same **§3.1** order: install + pins, optional resolved-version print, **Ruff** lint, **Ruff** format check, **`pytest`** (full suite unless a narrower spike scope is documented with rationale in [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7.2** step **3**—default is **full** suite). |
-| **Discoverability** | README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** names the workflow path and how maintainers trigger it. |
+| **Discoverability** | README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** names the workflow path and how maintainers trigger it. Implemented path: [`.github/workflows/otel-2x-spike.yml`](../.github/workflows/otel-2x-spike.yml) (**`otel-2x-spike`** job); README **Version compatibility** is canonical for triggers. |
 
 ## 3. Normative CI behavior
 

@@ -33,6 +33,8 @@ These symbols are the intended stable exports (see the spec for parameters and s
 
 **Normative policy** (matrix shape, justified pins, how CI should validate): **[docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md)**. That spec maps the backlog *Add compatibility matrix and dependency pins for replayt and OpenTelemetry* to testable Builder obligations. This package stays on **OpenTelemetry 1.x** within the declared range (`pyproject.toml` caps API/SDK **below 2**). A **2026-03-29** PyPI audit found **no** published **2.x** API/SDK (see that document **§7.2**). Spike workflow, documentation outcomes, and when CI may add **2.x** matrix cells are in **§7**, with integrator policy in **[docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) §7.4**.
 
+**OpenTelemetry 2.x spike (optional, non-merge-blocking):** [`.github/workflows/otel-2x-spike.yml`](.github/workflows/otel-2x-spike.yml) defines job **`otel-2x-spike`**. It runs on **`workflow_dispatch`** and on a **weekly** `schedule`. [`scripts/otel_2x_probe.py`](scripts/otel_2x_probe.py) selects the highest paired **`opentelemetry-api`** / **`opentelemetry-sdk`** version whose major is **2** or newer on PyPI; if there is no such pair, the workflow skips Ruff and pytest (see [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§7.2** step **0** and **§7.5**). When a pair exists, steps match [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.1** after pinning that pair (resolved-version log, **Ruff** lint, **Ruff** format check, **`pytest -q`**).
+
 Declared dependency ranges live in **`pyproject.toml`**. Current snapshot:
 
 | Component | Supported range (see `pyproject.toml`) | CI / validation |
@@ -90,7 +92,7 @@ python -m ruff format --check src tests
 
 **Exit codes:** `pytest` exits **`0`** when all tests pass and **non-zero** on failure (standard pytest semantics). Normative test obligations (success vs failure vs exporter-error coverage, fakes, replayt boundary) live in **[docs/TESTING_SPEC.md](docs/TESTING_SPEC.md)**.
 
-**CI entry point:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — job **`test`** runs the Ruff and pytest commands above (after matrix pins) in **separate steps** so the Actions UI shows whether lint, format, or tests failed; see **[docs/CI_SPEC.md](docs/CI_SPEC.md)** for the full contract.
+**CI entry point:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) — job **`test`** runs the Ruff and pytest commands above (after matrix pins) in **separate steps** so the Actions UI shows whether lint, format, or tests failed; see **[docs/CI_SPEC.md](docs/CI_SPEC.md)** for the full contract. Optional **OpenTelemetry 2.x** candidate checks use [`.github/workflows/otel-2x-spike.yml`](.github/workflows/otel-2x-spike.yml) (**§2.4** there, [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§7.5**); that job does **not** gate merges.
 
 **CI:** job **`test`** runs the same steps on **Python 3.11** and **3.12** for **each** replayt×OpenTelemetry cell ([docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**, [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**). There is no **`CONTRIBUTING.md`**; local commands above are the contributor contract.
 
@@ -239,5 +241,6 @@ team's tooling.
 | `tests/` | Pytest suite |
 | `pyproject.toml` | Package metadata, Ruff and pytest settings |
 | `.github/workflows/ci.yml` | Lint and test workflow |
+| `.github/workflows/otel-2x-spike.yml` | Optional non-blocking OpenTelemetry **2.x** probe + Ruff/pytest when a paired **2.x** exists on PyPI |
 | `.github/workflows/publish-pypi.yml` | Tag-gated PyPI publish (OIDC trusted publishing) |
 | `.gitignore` | Ignores `.orchestrator/` and `.cursor/skills/` (local tooling) |

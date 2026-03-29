@@ -187,6 +187,8 @@ The spike proves **feasibility**; **shipping** support still requires **§7.3–
 
 **Builder audit (phase 3, 2026-03-29):** `pip index versions opentelemetry-api` and `pip index versions opentelemetry-api --pre` on PyPI showed **no** **2.x** line for **`opentelemetry-api`** (latest **1.40.0**). The same constraint applies to **`opentelemetry-sdk`** (paired releases). No **2.x** install or Ruff/pytest spike was possible; this package remains **1.x**-only with **`>=1.20.0,<2`** until **2.x** packages exist and a maintainer repeats **§7.2** steps **1–3**.
 
+**Automation (phase 3, 2026-03-29):** [`.github/workflows/otel-2x-spike.yml`](../.github/workflows/otel-2x-spike.yml) (job **`otel-2x-spike`**) implements **§7.5** / [CI_SPEC.md](CI_SPEC.md) **§2.4**: **`workflow_dispatch`** and weekly **`schedule`**, [`scripts/otel_2x_probe.py`](../scripts/otel_2x_probe.py) for a paired **2.x** pin, then **§3.1** checks when a pair exists; otherwise the job skips Ruff/pytest and stays green (**§7.2** step **0**).
+
 ### 7.3 Documentation outcomes (required before merge)
 
 After the spike, the **merge** that claims **2.x** support (or the decision **not** to support it) MUST update **all** of the following **in the same change set** (or an explicitly linked docs PR that lands before dependency bounds merge):
@@ -210,6 +212,7 @@ Backlog *OpenTelemetry 2.x readiness spike (matrix branch + spec deltas)* allows
 - **Forbidden until justified** — Treating **2.x** green runs as **supported** in README, **`pyproject.toml`**, or the **§4.1** merge matrix **without** **§7.3** documentation and **§7.4** matrix rules.
 - **Naming** — Workflow or job id SHOULD name OpenTelemetry **2.x** explicitly (e.g. **`otel-2x-spike`**) so logs are auditable; see [CI_SPEC.md](CI_SPEC.md) **§2.4**.
 - **Pins** — The workflow MUST print resolved **`opentelemetry-api`**, **`opentelemetry-sdk`**, and **`replayt`** versions for the row (same style as job **`test`**).
+- **Repository workflow** — [`.github/workflows/otel-2x-spike.yml`](../.github/workflows/otel-2x-spike.yml) (**`otel-2x-spike`** job); README **Version compatibility** describes triggers and behavior.
 
 ### 7.6 Acceptance criteria summary (this backlog)
 
