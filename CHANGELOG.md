@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Documentation
+- Phase **5** architect (*Expand CI matrix with optional Python 3.11 job*): [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§1.1** maps the backlog; **§7.2**–**§7.3** and **§8** item **14** name job **`test-python-3-11`** and [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.3** / [docs/CI_SPEC.md](docs/CI_SPEC.md) **§3.6**. [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§3.2** states the supplemental job repeats the same Ruff and pytest commands on **`schedule`** / **`workflow_dispatch`**.
 - Phase **6** security review (*Release engineering: PyPI publish and version sync*): Confirmed OIDC-only default for PyPI upload, tag-scoped publish trigger, and minimal workflow permissions; **CHANGELOG** section markers repaired after merge corruption (`§` / en-dash ranges / matrix **×**). See phase **6** orchestrator handoff for supply-chain notes (pinned **`build`** in publish job, **`twine check`** step).
 
 ### Changed

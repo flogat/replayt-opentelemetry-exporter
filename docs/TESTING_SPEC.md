@@ -35,7 +35,7 @@ Match maintainer expectations with **`python -m ruff check src tests`** and **`p
 
 ### 3.2 CI parity
 
-The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** job **`test`**: each matrix cell runs Ruff then **the same `pytest` invocation** contributors use (no alternate test runner unless documented in this spec and README). **Step naming, exit-code propagation, and safe CI logs** for that job are normative in **[CI_SPEC.md](CI_SPEC.md)**.
+The canonical automation is **[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)** job **`test`**: each matrix cell runs Ruff then **the same `pytest` invocation** contributors use (no alternate test runner unless documented in this spec and README). **Step naming, exit-code propagation, and safe CI logs** for that job are normative in **[CI_SPEC.md](CI_SPEC.md)**. Job **`test-python-3-11`** repeats those Ruff and pytest commands on **Python 3.11** for one documented pin set when the workflow runs on **`schedule`** or **`workflow_dispatch`** ([CI_SPEC.md](CI_SPEC.md) **§3.6**); it is not the default merge gate unless branch protection says otherwise.
 
 ### 3.3 Exit codes
 
