@@ -55,6 +55,16 @@ The backlog item *Add CI with ruff, tests, and readable logs* is satisfied for *
 
 Implementing or adjusting workflow YAML is **Builder** work; [CI_SPEC.md](CI_SPEC.md) **§5** is the checklist.
 
+The backlog item *Curate docs/reference-documentation from replayt public API* is satisfied for **documentation** when:
+
+| Backlog acceptance criterion | Where it is specified |
+| ---------------------------- | -------------------- |
+| Bounded markdown (or scripted regeneration) for replayt **Workflow**, **Runner**, **RunContext**, **run_with_mock**, version-stamped to matrix replayt pins | [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) **§2–§4** |
+| Links from README and **REPLAYT_ECOSYSTEM_IDEA.md** | [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) **§5** |
+| Alignment with compatibility matrix replayt versions | [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) **§4**; [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** |
+
+Authoring **`docs/reference-documentation/`** and optional **`scripts/`** tooling is **Builder** work; this §1.1 row is the documentation contract.
+
 The backlog item *Document operator dashboards for canonical metrics* is satisfied for **documentation** when:
 
 | Backlog acceptance criterion | Where it is specified |
@@ -73,7 +83,7 @@ Authoring **`docs/OPERATOR_RUNBOOK.md`** and README links is **Builder** work; t
 
 ### 2.2 Suggested touchpoints (replayt public surface)
 
-Replayt’s public API includes types such as `Workflow`, `Runner`, `RunContext`, `RunResult`, and helpers like `run_with_mock` (see replayt’s own docs and `__all__` for the version you use). Integrators SHOULD wrap the **narrowest** block that corresponds to one logical run—for example:
+Replayt’s public API includes types such as `Workflow`, `Runner`, `RunContext`, `RunResult`, and helpers like `run_with_mock` (see replayt’s own docs and `__all__` for the version you use). When **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)** is implemented, **`docs/reference-documentation/`** holds bounded, version-stamped notes for the primary workflow/run symbols. Integrators SHOULD wrap the **narrowest** block that corresponds to one logical run—for example:
 
 - Around the invocation of `Runner` methods that execute a workflow through to completion or failure, or
 - Around `run_with_mock` (or equivalent) when that is the integration’s unit of work.
@@ -313,6 +323,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 - CI job **`.github/workflows/ci.yml`** **`test`** runs a **four-cell matrix** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell.
 - **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until README and the compatibility matrix claim a different line.
+- **Optional deep snapshot:** When **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)** is implemented, **`docs/reference-documentation/`** holds version-stamped notes for those symbols aligned to matrix pins; integrators should still treat [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§2** as the normative seam for *this* package.
 - When this repository claims support for a specific replayt line in README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md), update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
 ### 7.3 Compatibility snapshot (copy for releases)
@@ -344,6 +355,7 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 7. **Docs consistency** — README metric names, trace verification notes, and descriptions align with §5–§6 and [CHANGELOG.md](../CHANGELOG.md) **Unreleased** entries after implementation.
 8. **CI readability** — [CI_SPEC.md](CI_SPEC.md) **§5** is satisfied: Ruff lint, Ruff format check, and pytest run in separately identifiable steps; failures surface the failing tool; exit codes are not masked; logs follow **§3.3–§3.4**; README satisfies **§3.5**.
 9. **Operator monitoring** — [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) is satisfied: **`docs/OPERATOR_RUNBOOK.md`** exists (or README carries equivalent depth per that spec), links from README **Metrics** / **Operator monitoring**, and contains the §4–§7 content obligations (PromQL examples, Grafana panel intent, alert starting points) aligned with §5–§6.
+10. **Replayt reference docs** — [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) is satisfied: **`docs/reference-documentation/README.md`** indexes version-stamped snapshots for **Workflow**, **Runner**, **RunContext**, and **run_with_mock** per matrix replayt pins; README and **REPLAYT_ECOSYSTEM_IDEA.md** link per that spec **§5**.
 
 ## 9. Related documents
 
@@ -354,3 +366,4 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md) — `RunSummary` / `generate_run_summary`.
 - [SECURITY_REDACTION.md](SECURITY_REDACTION.md) — What MUST NOT appear in attributes or summaries; lifecycle defaults (**§6**).
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
+- [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.

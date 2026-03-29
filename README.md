@@ -50,8 +50,12 @@ Matrix updates are validated by that workflow: every push runs **Ruff** and **py
 
 ## Reference documentation (optional)
 
-This checkout does not yet include [`docs/reference-documentation/`](docs/reference-documentation/). You can add markdown
-copies of upstream replayt documentation there for offline review or agent context.
+**Contract:** [docs/REFERENCE_DOCUMENTATION_SPEC.md](docs/REFERENCE_DOCUMENTATION_SPEC.md) defines what belongs under
+[`docs/reference-documentation/`](docs/reference-documentation/)—bounded, version-stamped markdown (or a documented
+regeneration script) for replayt’s **Workflow**, **Runner**, **RunContext**, and **run_with_mock**, aligned with the
+replayt versions in [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPATIBILITY_MATRIX_SPEC.md) **§4.1**. That folder is
+**optional until the Builder implements the backlog**; until then, use replayt’s upstream docs and `__all__` for the
+version you install.
 
 ## Quick start
 
@@ -166,7 +170,8 @@ team's tooling.
 | `docs/CI_SPEC.md` | CI step naming, Ruff + pytest commands, exit codes, safe logs |
 | `docs/OPERATOR_MONITORING_SPEC.md` | Operator dashboards/alerts spec for §5 metrics |
 | `docs/OPERATOR_RUNBOOK.md` | Operator PromQL/Grafana/alert guidance for canonical metrics |
-| `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present) |
+| `docs/REFERENCE_DOCUMENTATION_SPEC.md` | Spec for bounded replayt public-surface snapshots under `docs/reference-documentation/` |
+| `docs/reference-documentation/` | Optional markdown snapshot for contributors (when present; see spec above) |
 | `src/replayt_opentelemetry_exporter/` | Python package (import `replayt_opentelemetry_exporter`) |
 | `tests/` | Pytest suite |
 | `pyproject.toml` | Package metadata, Ruff and pytest settings |
