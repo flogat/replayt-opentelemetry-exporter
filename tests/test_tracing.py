@@ -410,48 +410,131 @@ def test_workflow_run_span_merges_extra_attributes() -> None:
     assert spans[0].attributes["custom.dim"] == "us-east-1"
 
 
-def test_workflow_run_span_reserved_keys_in_attributes_do_not_override() -> None:
-    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
-    with workflow_run_span(
-        tracer,
-        "wf-canonical",
-        run_id="run-canonical",
-        attributes={
-            "replayt.workflow.id": "wf-evil",
-            "replayt.run.id": "run-evil",
-            "custom.dim": "ok",
-        },
-    ):
-        pass
-    provider.force_flush()
-    spans = exporter.get_finished_spans()
-    assert spans[0].attributes["replayt.workflow.id"] == "wf-canonical"
-    assert spans[0].attributes["replayt.run.id"] == "run-canonical"
-    assert spans[0].attributes["custom.dim"] == "ok"
+# TESTING_SPEC §4.7 + SECURITY_REDACTION.md Optional span attributes — redaction matrices below.
 
 
-def test_workflow_run_span_omits_blocked_attribute_keys() -> None:
+@pytest.mark.parametrize(
+    "blocked_key",
+    sorted(tracing_mod._EXACT_BLOCKED_ATTRIBUTE_KEYS),
+)
+def test_workflow_run_span_omits_exact_blocked_attribute_keys(blocked_key: str) -> None:
+    """TESTING_SPEC §4.7; SECURITY_REDACTION.md optional span attrs — exact blocked-key matrix."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
     with workflow_run_span(
         tracer,
         "wf-123",
-        attributes={"api_key": "secret-value", "region": "eu"},
+        attributes={blocked_key: "credential-like-value", "region": "eu"},
     ):
         pass
     provider.force_flush()
-    spans = exporter.get_finished_spans()
-    assert "api_key" not in spans[0].attributes
-    assert spans[0].attributes["region"] == "eu"
+    attrs = exporter.get_finished_spans()[0].attributes
+    assert blocked_key not in attrs
+    assert attrs["region"] == "eu"
 
 
-def test_workflow_run_span_truncates_long_attribute_values() -> None:
+@pytest.mark.parametrize(
+    "blocked_key",
+    [
+        "my_password_hint",
+        "legacy_passwd_field",
+        "integration_api_key_name",
+        "vendorapikeyfield",
+        "oauth_access_token",
+        "signing_secret",
+        "BeArEr",
+    ],
+)
+def test_workflow_run_span_omits_blocked_keys_substring_suffix_and_case(
+    blocked_key: str,
+) -> None:
+    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — substring, _token/_secret suffix, lowercasing."""
     tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
-    long_val = "x" * 150
-    with workflow_run_span(tracer, "wf-123", attributes={"note": long_val}):
+    with workflow_run_span(
+        tracer,
+        "wf-123",
+        attributes={blocked_key: "should-not-export", "allowed.safe": "kept"},
+    ):
         pass
     provider.force_flush()
-    spans = exporter.get_finished_spans()
-    assert spans[0].attributes["note"] == "x" * 100
+    attrs = exporter.get_finished_spans()[0].attributes
+    assert blocked_key not in attrs
+    assert attrs["allowed.safe"] == "kept"
+
+
+@pytest.mark.parametrize(
+    ("raw_len", "expected_len"),
+    [
+        (99, 99),
+        (100, 100),
+        (101, 100),
+        (150, 100),
+    ],
+)
+def test_workflow_run_span_truncates_optional_attributes_at_100_codepoints(
+    raw_len: int, expected_len: int
+) -> None:
+    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — 100 code-point cap, no ellipsis on attrs."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    payload = "x" * raw_len
+    with workflow_run_span(tracer, "wf-123", attributes={"note": payload}):
+        pass
+    provider.force_flush()
+    got = exporter.get_finished_spans()[0].attributes["note"]
+    assert len(got) == expected_len
+    assert got == payload[:100]
+
+
+@pytest.mark.parametrize(
+    ("workflow_id", "run_id", "extra_attrs"),
+    [
+        (
+            "wf-canonical",
+            "run-canonical",
+            {
+                "replayt.workflow.id": "wf-evil",
+                "replayt.run.id": "run-evil",
+                "custom.dim": "ok",
+            },
+        ),
+        (
+            "wf-only",
+            None,
+            {"replayt.run.id": "run-evil", "custom.dim": "ok"},
+        ),
+        (
+            "wf-only",
+            "run-ok",
+            {"replayt.workflow.id": "wf-evil", "custom.dim": "ok"},
+        ),
+        (
+            "wf-only",
+            None,
+            {"replayt.workflow.id": "wf-evil", "custom.dim": "ok"},
+        ),
+    ],
+)
+def test_workflow_run_span_reserved_keys_in_attributes_do_not_override(
+    workflow_id: str,
+    run_id: str | None,
+    extra_attrs: dict[str, str],
+) -> None:
+    """TESTING_SPEC §4.7; SECURITY_REDACTION.md — reserved workflow/run id keys not overridden."""
+    tracer, exporter, provider = _workflow_tracer_from_memory_exporter()
+    with workflow_run_span(
+        tracer,
+        workflow_id,
+        run_id=run_id,
+        attributes=extra_attrs,
+    ):
+        pass
+    provider.force_flush()
+    attrs = exporter.get_finished_spans()[0].attributes
+    assert attrs["replayt.workflow.id"] == workflow_id
+    if run_id is not None:
+        assert attrs["replayt.run.id"] == run_id
+    else:
+        assert "replayt.run.id" not in attrs
+    assert attrs["custom.dim"] == "ok"
 
 
 def test_get_workflow_tracer_uses_global_provider() -> None:
