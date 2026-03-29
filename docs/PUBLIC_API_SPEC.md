@@ -488,5 +488,5 @@ The **documentation** backlog (phase 2) is complete when §1.1 holds for every b
 - [OPERATOR_MONITORING_SPEC.md](OPERATOR_MONITORING_SPEC.md) — Dashboards, PromQL/Grafana recipes, and alert starting points for §5 metrics (runbook deliverable).
 - [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) — Bounded local snapshot of replayt workflow/run public API under **`docs/reference-documentation/`**.
 - [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** — OpenTelemetry 2.x spike, policy, and CI gating (companion to **§7.4** here).
-- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (**§8** item **13**), integrator-visible release hygiene (**§9**, **§8** item **16**).
+- [RELEASE_ENGINEERING_SPEC.md](RELEASE_ENGINEERING_SPEC.md) — PyPI publish, version single source of truth, tag-gated trusted publishing, **CHANGELOG** alignment (this document **§8** item **13**), **§9** changelog/README/milestone hygiene (this document **§8** item **16**).
 - [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/) — informative upstream reference; **§5.7** and **§6.8** document how this package relates to them.
