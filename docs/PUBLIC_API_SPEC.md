@@ -83,7 +83,7 @@ Authoring **`docs/OPERATOR_RUNBOOK.md`** and README links is **Builder** work; t
 
 ### 2.2 Suggested touchpoints (replayt public surface)
 
-Replayt’s public API includes types such as `Workflow`, `Runner`, `RunContext`, `RunResult`, and helpers like `run_with_mock` (see replayt’s own docs and `__all__` for the version you use). When **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)** is implemented, **`docs/reference-documentation/`** holds bounded, version-stamped notes for the primary workflow/run symbols. Integrators SHOULD wrap the **narrowest** block that corresponds to one logical run—for example:
+Replayt’s public API includes types such as `Workflow`, `Runner`, `RunContext`, `RunResult`, and helpers like `run_with_mock` (see replayt’s own docs and `__all__` for the version you use). **`docs/reference-documentation/`** holds bounded, version-stamped notes for the primary workflow/run symbols ([REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)). Integrators SHOULD wrap the **narrowest** block that corresponds to one logical run—for example:
 
 - Around the invocation of `Runner` methods that execute a workflow through to completion or failure, or
 - Around `run_with_mock` (or equivalent) when that is the integration’s unit of work.
@@ -323,7 +323,7 @@ Lifecycle **span attributes** and **event attributes** defined in this section M
 
 - CI job **`.github/workflows/ci.yml`** **`test`** runs a **four-cell matrix** (see [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1**): replayt **0.4.0** and **latest**, OpenTelemetry API/SDK **1.20.0** and **1.40.0**, with resolved versions printed each cell.
 - **Mission Control baseline (phase 1c):** replayt **0.4.25** was installed when the backlog pipeline last captured dependency output; treat that as the **reference** public API snapshot for examples (`Workflow`, `Runner`, `RunContext`, `run_with_mock`, etc.) until README and the compatibility matrix claim a different line.
-- **Optional deep snapshot:** When **[REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)** is implemented, **`docs/reference-documentation/`** holds version-stamped notes for those symbols aligned to matrix pins; integrators should still treat [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§2** as the normative seam for *this* package.
+- **Deep snapshot:** **`docs/reference-documentation/`** holds version-stamped notes for those symbols aligned to matrix pins ([REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md)); integrators should still treat [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§2** as the normative seam for *this* package.
 - When this repository claims support for a specific replayt line in README or [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md), update examples and §2.2 in the same release branch—**no TODO** for touchpoints once that version is advertised.
 
 ### 7.3 Compatibility snapshot (copy for releases)

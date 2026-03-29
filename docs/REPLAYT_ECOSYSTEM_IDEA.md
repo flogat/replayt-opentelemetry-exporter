@@ -49,7 +49,4 @@ _Novel composition of replayt + other tools._
   `.github/workflows/ci.yml`.
 - **Tracking replayt releases:** This repo tracks replayt versions via dependency pins in `pyproject.toml`, CI matrix
   testing, and changelog notes. Breakages are fixed by updating this package, not by steering replayt core.
-- **Local replayt API context:** [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md) describes an optional
-  **`docs/reference-documentation/`** tree—bounded, version-stamped notes for **Workflow**, **Runner**, **RunContext**,
-  and **run_with_mock** aligned with the same replayt pins [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md)
-  exercises—so integrators can keep context next to this adapter (see root [README.md](../README.md) **Reference documentation**).
+- **Local replayt API context:** **`docs/reference-documentation/`** (indexed by [reference-documentation/README.md](reference-documentation/README.md)) holds bounded, version-stamped notes for **Workflow**, **Runner**, **RunContext**, and **run_with_mock**, aligned with the replayt pins [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§4.1** exercises. The normative contract is [REFERENCE_DOCUMENTATION_SPEC.md](REFERENCE_DOCUMENTATION_SPEC.md); root [README.md](../README.md) **Reference documentation** links the folder.
