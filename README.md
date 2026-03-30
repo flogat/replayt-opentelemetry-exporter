@@ -15,7 +15,7 @@ This project builds on **[replayt](https://pypi.org/project/replayt/)**. Read
 - **CI contract:** [docs/CI_SPEC.md](docs/CI_SPEC.md) — Ruff + pytest step naming, exit codes, and log hygiene (matches [DESIGN_PRINCIPLES.md](docs/DESIGN_PRINCIPLES.md) **Observable automation**).
 - **Releases:** [docs/RELEASE_ENGINEERING_SPEC.md](docs/RELEASE_ENGINEERING_SPEC.md) — maintainer checklist (**§4**), strategy **B** version sync (**§6.1**), [`.github/workflows/publish-pypi.yml`](.github/workflows/publish-pypi.yml) for tag-gated **OIDC** publish (**§5.2**).
 - **Pins and upgrades:** [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§7.6** and **Pinning, SemVer, and breaking changes** below.
-- **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below. For a **`Runner.run`** walk-through with **`MockLLMClient`**, see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md).
+- **Quick pattern:** install global tracer and meter providers, obtain a tracer via `get_workflow_tracer()`, wrap each logical run with `workflow_run_span(...)`. See **Enable tracing and metrics in development** below. For a **`Runner.run`** walk-through with **`MockLLMClient`**, see [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md). If you **cannot** use **`workflow_run_span`** for the whole run, use **`record_run_outcome`** (and optionally **`generate_run_summary`** on your own run span) per [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.5** and **§3.5**; see [docs/examples/record_run_outcome_run_summary.md](docs/examples/record_run_outcome_run_summary.md).
 
 ### Public surface at a glance
 
@@ -71,6 +71,8 @@ aligned with the replayt pins in [docs/COMPATIBILITY_MATRIX_SPEC.md](docs/COMPAT
 replayt’s PyPI page and installed docstrings for the full upstream story.
 
 **Runner example:** [docs/examples/runner_workflow_run_span.md](docs/examples/runner_workflow_run_span.md) walks through **`Runner.run`** with **`MockLLMClient`** inside **`workflow_run_span`** (PUBLIC_API_SPEC §3.4).
+
+**Advanced metrics + summary (no `workflow_run_span`):** Normative pairing rules, meter provider requirements, and threading/async notes are in [docs/PUBLIC_API_SPEC.md](docs/PUBLIC_API_SPEC.md) **§5.5**. Runnable walk-through: [docs/examples/record_run_outcome_run_summary.md](docs/examples/record_run_outcome_run_summary.md) (**§3.5**); pytest coverage is [docs/TESTING_SPEC.md](docs/TESTING_SPEC.md) **§4.7**. [docs/RUN_SUMMARY_SPEC.md](docs/RUN_SUMMARY_SPEC.md) ties **`RunSummary`** to that path.
 
 ## Quick start
 

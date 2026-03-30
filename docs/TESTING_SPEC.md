@@ -97,6 +97,15 @@ Maintainers MAY satisfy the **`record_exporter_error`** bullet and the **§5.5.1
 - Matrix cells in CI MUST continue to run the **full** pytest suite unless a documented subset is approved in this spec and README (default: **full suite**).
 - **OpenTelemetry 2.x:** Do not expect **2.x**-pinned matrix cells until [COMPATIBILITY_MATRIX_SPEC.md](COMPATIBILITY_MATRIX_SPEC.md) **§7** is satisfied end-to-end (spike, **§7.3** documentation outcome, **§7.4** matrix expansion rules). When **2.x** cells exist, they MUST run the **full** suite like **1.x** cells, and **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **12** MUST be satisfied for the release.
 
+### 4.7 Advanced metrics without `workflow_run_span` (minimum)
+
+When integrators use **`record_run_outcome`** (and optionally **`generate_run_summary`**) **without** wrapping the full run in **`workflow_run_span`**, automated tests **MUST** cover:
+
+- **Success and failure metrics:** At least one parametrized or separate test that asserts **`replayt.workflow.run.outcomes_total`** and **`replayt.workflow.run.duration_ms`** (when **`duration_ms`** is supplied to **`record_run_outcome`**) use **`outcome`** = **`success`** and **`outcome`** = **`failure`** with **`workflow_id`** and optional **`run_id`** labels per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5** and **§5.5.3**. These tests **MUST NOT** depend on **§6** lifecycle span events or attributes emitted by **`workflow_run_span`**.
+- **Pairing with `generate_run_summary`:** At least one test that ends an integrator-owned span, calls **`record_run_outcome`**, then **`generate_run_summary`** with agreeing **`outcome`** semantics per [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5.5.2**, and asserts **`RunSummary`** fields (including timestamps and duration derived from the span) plus metric data points remain consistent with [RUN_SUMMARY_SPEC.md](RUN_SUMMARY_SPEC.md).
+
+Tests **MAY** live in existing modules (for example **`tests/test_tracing.py`**). Docstrings **SHOULD** cite this **§4.7** and [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§3.5** / **§5.5**. This path does **not** replace **§4.3** or **§4.4** obligations for **`workflow_run_span`**; it adds coverage for the advanced API surface only.
+
 ## 5. Builder acceptance checklist
 
 The **implementation** backlog for this item is complete when all of the following hold:
@@ -106,6 +115,7 @@ The **implementation** backlog for this item is complete when all of the followi
 3. **No replayt private API** imports in `tests/` (only public `replayt` symbols and this package’s API).
 4. **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **6** remains true: tests cover span lifecycle, §6 attributes/events, success/failure metrics, provider installation, and `__all__` parity as specified there; gaps are tracked under **Unreleased** in [CHANGELOG.md](../CHANGELOG.md) if intentionally deferred.
 5. **Semantic convention identifiers:** Any test that asserts literal span names, lifecycle event names, span attribute keys, metric instrument names, or meter scope strings stays consistent with [PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) **§5–§6** and the inventory in **§5.7** / **§6.8**; renames update those tests **in the same change** as the spec, operator runbook (if PromQL or narrative references the old name), and [CHANGELOG.md](../CHANGELOG.md) per **§8** item **15**.
+6. **§4.7 (advanced metrics without `workflow_run_span`)** — When **[PUBLIC_API_SPEC.md](PUBLIC_API_SPEC.md) §8** item **19** is in scope for the release line, tests satisfy **§4.7** (success/failure **`record_run_outcome`** metrics without **§6** lifecycle traces from **`workflow_run_span`**, and pairing with **`generate_run_summary`**); the example **`docs/examples/record_run_outcome_run_summary.md`** and README links match **§3.5** there.
 
 ## 6. Related documents
 
